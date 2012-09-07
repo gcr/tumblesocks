@@ -18,7 +18,7 @@
 
 (defvar tumblr-token nil)
 
-(defun tumblr-reauthenticate ()
+(defun tumblr-api-reauthenticate ()
   "Read our tumblr token from the tumblr token file, or generate a new one."
   (let ((tumblr-token-file (concat (file-name-as-directory user-emacs-directory)
                                    "tumblr-oauth-token")))
@@ -54,19 +54,19 @@
         (kill-this-buffer)))))
 
 
-(defun tumblr-url (&rest args)
+(defun tumblr-api-url (&rest args)
   (apply 'concat "https://api.tumblr.com/v2" args))
 
-(defun tumblr-http-noauth-get (url)
+(defun tumblr-api-http-noauth-get (url)
   "Post to an unauthenticated Tumblr API endpoint (url),
 using the given POST parameters (params, an alist).
 
 This function will return the response as JSON, or will signal an
 error if the error code is not in the 200 category."
   (with-current-buffer (url-retrieve-synchronously url)
-    (tumblr-process-response)))
+    (tumblr-api-process-response)))
 
-(defun tumblr-http-apikey-get (url params)
+(defun tumblr-api-http-apikey-get (url params)
   "Post to an API-key-authenticated Tumblr API endpoint (url),
 using the given POST parameters (params, an alist).
 
@@ -79,18 +79,19 @@ error if the error code is not in the 200 category."
                                     (concat "&" (url-hexify-string (car x))
                                             "=" (url-hexify-string (cdr x))))
                                  params "")))
-    (tumblr-process-response)))
+    (tumblr-api-process-response)))
 
-(defun tumblr-http-oauth-post (url params)
+(defun tumblr-api-http-oauth-post (url params)
   "Post to an OAuth-authenticated Tumblr API endpoint (url),
 using the given POST parameters (params, an alist).
 
 This function will return the response as JSON, or will signal an
 error if the error code is not in the 200 category."
+  (unless tumblr-token (tumblr-api-reauthenticate))
   (with-current-buffer (oauth-post-url tumblr-token url params)
-    (tumblr-process-response)))
+    (tumblr-api-process-response)))
 
-(defun tumblr-process-response ()
+(defun tumblr-api-process-response ()
   "Process Tumblr's response in the current buffer,
 returning JSON or signaling an error for other requests."
   (decode-coding-region (point-min) (point-max) 'utf-8-dos)
@@ -101,18 +102,28 @@ returning JSON or signaling an error for other requests."
   (skip-chars-forward "[0-9].")
   (let ((pointpos (point))
         (code (read (current-buffer))))
-    (if (not (and (<= 200 code) (<= code 299)))
-        (error (buffer-substring pointpos
-                                 (line-end-position)))
+    (cond
+     ((= code 100) ;; Gotta clean up the buffer and try again
       (search-forward-regexp "^$" nil t)
-      (let ((json-response (buffer-substring (1+ (point)) (point-max))))
-        (json-read-from-string json-response)))))
+      (delete-region (point-min) (point))
+      (tumblr-api-process-response))
+     ((not (and (<= 200 code) (<= code 299)))
+      (error (buffer-substring pointpos
+                               (line-end-position))))
+     (t
+      (search-forward-regexp "^$" nil t)
+      ;; body
+      (let* ((json-response (buffer-substring (1+ (point)) (point-max)))
+             (jsonobj (json-read-from-string json-response)))
+        (cdr (assq 'response jsonobj)))))))
 
-(defun tumblr-user-info ()
+
+
+(defun tumblr-api-user-info ()
   "Gather information about the logged in user"
-  (tumblr-http-oauth-post (tumblr-url "/user/info") '()))
+  (tumblr-api-http-oauth-post (tumblr-api-url "/user/info") '()))
 
-(defun tumblr-user-dashboard (&optional limit offset type since_id reblog_info notes_info)
+(defun tumblr-api-user-dashboard (&optional limit offset type since_id reblog_info notes_info)
   "Gather information about the logged in user's dashboard"
   (let ((args '()))
     (when limit (aput 'args "limit" limit))
@@ -121,63 +132,63 @@ returning JSON or signaling an error for other requests."
     (when since_id (aput 'args "since_id" since_id))
     (when reblog_info (aput 'args "reblog_info" reblog_info))
     (when notes_info (aput 'args "notes_info" notes_info))
-    (tumblr-http-oauth-post (tumblr-url "/user/dashboard") args)))
+    (tumblr-api-http-oauth-post (tumblr-api-url "/user/dashboard") args)))
 
-(defun tumblr-user-likes (&optional limit offset)
+(defun tumblr-api-user-likes (&optional limit offset)
   "Gather information about the logged in user's likes"
   (let ((args '()))
     (when limit (aput 'args "limit" limit))
     (when offset (aput 'args "offset" offset))
-    (tumblr-http-oauth-post (tumblr-url "/user/likes") args)))
+    (tumblr-api-http-oauth-post (tumblr-api-url "/user/likes") args)))
 
-(defun tumblr-user-following (&optional limit offset)
+(defun tumblr-api-user-following (&optional limit offset)
   "Gather information about which blogs are followed by the logged-in user"
   (let ((args '()))
     (when limit (aput 'args "limit" limit))
     (when offset (aput 'args "offset" offset))
-    (tumblr-http-oauth-post (tumblr-url "/user/following") args)))
+    (tumblr-api-http-oauth-post (tumblr-api-url "/user/following") args)))
 
-(defun tumblr-user-follow (url)
+(defun tumblr-api-user-follow (url)
   "Follow the given blog URL."
-  (tumblr-http-oauth-post (tumblr-url "/user/follow")
+  (tumblr-api-http-oauth-post (tumblr-api-url "/user/follow")
                           `(("url" . ,url))))
-(defun tumblr-user-unfollow (url)
+(defun tumblr-api-user-unfollow (url)
   "Unfollow the given blog URL."
-  (tumblr-http-oauth-post (tumblr-url "/user/unfollow")
+  (tumblr-api-http-oauth-post (tumblr-api-url "/user/unfollow")
                           `(("url" . ,url))))
-(defun tumblr-user-like (id reblog_key)
+(defun tumblr-api-user-like (id reblog_key)
   "Like a given post"
-  (tumblr-http-oauth-post (tumblr-url "/user/like")
+  (tumblr-api-http-oauth-post (tumblr-api-url "/user/like")
                           `(("id" . ,id)
                             ("reblog_key" . ,reblog_key))))
-(defun tumblr-user-unlike (id reblog_key)
+(defun tumblr-api-user-unlike (id reblog_key)
   "Unlike a given post"
-  (tumblr-http-oauth-post (tumblr-url "/user/unlike")
+  (tumblr-api-http-oauth-post (tumblr-api-url "/user/unlike")
                           `(("id" . ,id)
                             ("reblog_key" . ,reblog_key))))
 
-(defun tumblr-blog-info (&optional blog)
+(defun tumblr-api-blog-info (&optional blog)
   "Gather information about the blog. If not given, this defaults to `tumblr-blog'."
-  (tumblr-http-apikey-get
-   (tumblr-url "/blog/" (or blog tumblr-blog) "/info")
+  (tumblr-api-http-apikey-get
+   (tumblr-api-url "/blog/" (or blog tumblr-blog) "/info")
    '()))
 
 ;; TODO This returns actual image data, not JSON!
-;; (defun tumblr-blog-avatar (&optional blog)
+;; (defun tumblr-api-blog-avatar (&optional blog)
 ;;   "Gathers info about the given blog's avatar. Defaults to `tumblr-blog'"
-;;   (tumblr-http-noauth-get
-;;    (tumblr-url "/blog/" (or blog tumblr-blog) "/avatar")))
+;;   (tumblr-api-http-noauth-get
+;;    (tumblr-api-url "/blog/" (or blog tumblr-blog) "/avatar")))
 
-(defun tumblr-blog-followers (&optional blog)
+(defun tumblr-api-blog-followers (&optional blog)
   "Gathers info about the blog's followers. Defaults to `tumblr-blog'.
 
 See http://www.tumblr.com/docs/en/api/v2 for information about the returned JSON."
-  (tumblr-http-oauth-post
-   (tumblr-url "/blog/" (or blog tumblr-blog) "/followers") '()))
+  (tumblr-api-http-oauth-post
+   (tumblr-api-url "/blog/" (or blog tumblr-blog) "/followers") '()))
 
 
 
-(defun tumblr-blog-posts (&optional blog type id tag limit offset reblog_info notes_info filter)
+(defun tumblr-api-blog-posts (&optional blog type id tag limit offset reblog_info notes_info filter)
   "Gather info about the blog posts for the given blog (defaults to `tumblr-blog').
 
 Type should be one of text, quote, link, answer, video, audio, photo, chat.
@@ -194,40 +205,40 @@ the returned JSON."
     (when reblog_info (aput 'args "reblog_info" reblog_info))
     (when notes_info (aput 'args "notes_info" notes_info))
     (when filter (aput 'args "filter" filter))
-    (tumblr-http-apikey-get
-     (tumblr-url "/blog/"
+    (tumblr-api-http-apikey-get
+     (tumblr-api-url "/blog/"
                  (or blog tumblr-blog)
                  "/posts"
                  (if type (concat "/" type) ""))
      args)))
 
-(defun tumblr-blog-queued-posts (&optional blog offset filter)
+(defun tumblr-api-blog-queued-posts (&optional blog offset filter)
   "Retrieve queued blog posts from blog. Defaults to `tumblr-blog'."
   (let ((args '()))
     (when offset (aput 'args "offset" offset))
     (when filter (aput 'args "filter" filter))
-    (tumblr-http-oauth-post
-     (tumblr-url "/blog/" (or blog tumblr-blog) "/posts/queue")
+    (tumblr-api-http-oauth-post
+     (tumblr-api-url "/blog/" (or blog tumblr-blog) "/posts/queue")
      args)))
 
-(defun tumblr-blog-draft-posts (&optional blog filter)
+(defun tumblr-api-blog-draft-posts (&optional blog filter)
   "Retrieve draft blog posts from blog. Defaults to `tumblr-blog'."
   (let ((args '()))
     (when filter (aput 'args "filter" filter))
-    (tumblr-http-oauth-post
-     (tumblr-url "/blog/" (or blog tumblr-blog) "/posts/draft")
+    (tumblr-api-http-oauth-post
+     (tumblr-api-url "/blog/" (or blog tumblr-blog) "/posts/draft")
      args)))
 
-(defun tumblr-blog-submission-posts (&optional blog offset filter)
+(defun tumblr-api-blog-submission-posts (&optional blog offset filter)
   "Retrieve submission blog posts from blog. Defaults to `tumblr-blog'."
   (let ((args '()))
     (when offset (aput 'args "offset" offset))
     (when filter (aput 'args "filter" filter))
-    (tumblr-http-oauth-post
-     (tumblr-url "/blog/" (or blog tumblr-blog) "/posts/submission")
+    (tumblr-api-http-oauth-post
+     (tumblr-api-url "/blog/" (or blog tumblr-blog) "/posts/submission")
      args)))
 
-(defun tumblr-new-post (&optional blog args)
+(defun tumblr-api-new-post (&optional blog args)
   "Create a new post, using Tumblr's post API. Blog defaults to
 `tumblr-blog' and args must be an alist of arguments to use.
 
@@ -235,36 +246,36 @@ If you're making a text post, for example, args should be something like
 '((\"type\" . \"text\")
   (\"title\" . \"How to use the Tumblr API\")
   (\"body\" . \"...\"))"
-  (tumblr-http-oauth-post
-   (tumblr-url "/blog/" (or blog tumblr-blog) "/post")
+  (tumblr-api-http-oauth-post
+   (tumblr-api-url "/blog/" (or blog tumblr-blog) "/post")
    args))
 
-(defun tumblr-edit-post (id &optional blog args)
+(defun tumblr-api-edit-post (id &optional blog args)
   "Edit the post with the given id. args should be as in `tumblr-new-post'."
   (aput 'args "id" id)
-  (tumblr-http-oauth-post
-   (tumblr-url "/blog/" (or blog tumblr-blog) "/post/edit")
+  (tumblr-api-http-oauth-post
+   (tumblr-api-url "/blog/" (or blog tumblr-blog) "/post/edit")
    args))
 
-(defun tumblr-reblog-post (id reblog_key &optional blog)
+(defun tumblr-api-reblog-post (id reblog_key &optional blog)
   "Reblog a post with the given id and reblog key."
-  (tumblr-http-oauth-post
-   (tumblr-url "/blog/" (or blog tumblr-blog) "/post/reblog")
+  (tumblr-api-http-oauth-post
+   (tumblr-api-url "/blog/" (or blog tumblr-blog) "/post/reblog")
    `(("id" . ,id)
      ("reblog_key" . ,reblog_key))))
 
-(defun tumblr-delete-post (id &optional blog)
+(defun tumblr-api-delete-post (id &optional blog)
   "Delete the post with the given id. args should be as in `tumblr-new-post'."
-  (tumblr-http-oauth-post
-   (tumblr-url "/blog/" (or blog tumblr-blog) "/post/delete")
+  (tumblr-api-http-oauth-post
+   (tumblr-api-url "/blog/" (or blog tumblr-blog) "/post/delete")
    `(("id" . ,id))))
 
-(defun tumblr-tagged (tag &optional before limit filter)
+(defun tumblr-api-tagged (tag &optional before limit filter)
   (let ((args '()))
     (aput 'args "tag" tag)
     (when before (aput 'args "before" before))
     (when limit (aput 'args "limit" limit))
     (when filter (aput 'args "filter" filter))
-    (tumblr-http-oauth-post
-     (tumblr-url "/tagged")
+    (tumblr-api-http-oauth-post
+     (tumblr-api-url "/tagged")
      args)))
