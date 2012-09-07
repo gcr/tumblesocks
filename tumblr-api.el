@@ -1,15 +1,8 @@
-;; HOW TO AUTHORIZE:
-;; (setq tumblr-token
-;;       (oauth-authorize-app
-;;        tumblr-consumer-key
-;;        tumblr-secret-key
-;;        "https://www.tumblr.com/oauth/request_token"
-;;        "https://www.tumblr.com/oauth/access_token"
-;;        "https://www.tumblr.com/oauth/authorize"))
+;; tumblr-api.el -- functions for talking with tumblr
+;; Copyright (C) 2012 gcr
 
-;; so the callback will send you to a page; give me back the
-;; oauth_verifier URL ID.
-;; so hopefully that went well ... ... ...
+(require 'oauth)
+(provide 'tumblr-api)
 
 (defcustom tumblr-consumer-key nil
   "Your tumblr app's consumer API key"
@@ -23,6 +16,42 @@
   "Your blog name, like xxx.tumblr.com"
   :type 'string)
 
+(defvar tumblr-token nil)
+
+(defun tumblr-reauthenticate ()
+  "Read our tumblr token from the tumblr token file, or generate a new one."
+  (let ((tumblr-token-file (concat (file-name-as-directory user-emacs-directory)
+                                   "tumblr-oauth-token")))
+    (when (file-exists-p tumblr-token-file)
+      (save-excursion
+        (find-file tumblr-token-file)
+        (let ((str (buffer-substring (point-min) (point-max))))
+          (if (string-match "\\([^:]*\\):\\(.*\\)"
+                            (buffer-substring (point-min) (point-max)))
+              (setq tumblr-token
+                    (make-oauth-access-token
+                     :consumer-key tumblr-consumer-key
+                     :consumer-secret tumblr-secret-key
+                     :auth-t (make-oauth-t
+                              :token (match-string 1 str)
+                              :token-secret (match-string 2 str))))))
+        (kill-this-buffer)))
+    (unless tumblr-token
+      (setq tumblr-token (oauth-authorize-app
+                          tumblr-consumer-key
+                          tumblr-secret-key
+                          "https://www.tumblr.com/oauth/request_token"
+                          "https://www.tumblr.com/oauth/access_token"
+                          "https://www.tumblr.com/oauth/authorize"))
+      (save-excursion
+        (find-file tumblr-token-file)
+        (erase-buffer)
+        (let ((token (oauth-access-token-auth-t tumblr-token)))
+          (insert (format "%s:%s\n"
+                          (oauth-t-token token)
+                          (oauth-t-token-secret token))))
+        (save-buffer)
+        (kill-this-buffer)))))
 
 
 (defun tumblr-url (&rest args)
@@ -200,43 +229,42 @@ the returned JSON."
 
 (defun tumblr-new-post (&optional blog args)
   "Create a new post, using Tumblr's post API. Blog defaults to
-`tumblr-blog' and args must be an alist of arguments to use."
+`tumblr-blog' and args must be an alist of arguments to use.
+
+If you're making a text post, for example, args should be something like
+'((\"type\" . \"text\")
+  (\"title\" . \"How to use the Tumblr API\")
+  (\"body\" . \"...\"))"
   (tumblr-http-oauth-post
    (tumblr-url "/blog/" (or blog tumblr-blog) "/post")
    args))
 
-(defun tumblr-new-text-post (title body &optional blog args)
-  "Create a new text post using title and body."
-  (aput 'args "type" "text")
-  (aput 'args "title" title)
-  (aput 'args "body" body)
-  (tumblr-new-post blog args))
-(defun tumblr-new-quote-post (quote &optional source blog args)
-  "Create a new quote post."
-  (aput 'args "type" "quote")
-  (aput 'args "quote" quote)
-  (when source (aput 'args "source" source))
-  (tumblr-new-post blog args))
-(defun tumblr-new-link-post (url &optional title description blog args)
-  "Create a new link post."
-  (aput 'args "type" "link")
-  (aput 'args "url" url)
-  (when title (aput 'args "title" title))
-  (when description (aput 'args "description" description))
-  (tumblr-new-post blog args))
-(defun tumblr-new-chat-post (conversation &optional title blog args)
-  "Create a new chat post."
-  (aput 'args "type" "chat")
-  (aput 'args "conversation" conversation)
-  (when title (aput 'args "title" title))
-  (tumblr-new-post blog args))
+(defun tumblr-edit-post (id &optional blog args)
+  "Edit the post with the given id. args should be as in `tumblr-new-post'."
+  (aput 'args "id" id)
+  (tumblr-http-oauth-post
+   (tumblr-url "/blog/" (or blog tumblr-blog) "/post/edit")
+   args))
 
-;; TODO: make photo posts
-;; TODO: make audio posts
-;; TODO: make video posts
+(defun tumblr-reblog-post (id reblog_key &optional blog)
+  "Reblog a post with the given id and reblog key."
+  (tumblr-http-oauth-post
+   (tumblr-url "/blog/" (or blog tumblr-blog) "/post/reblog")
+   `(("id" . ,id)
+     ("reblog_key" . ,reblog_key))))
 
-;; TODO: edit posts
-;; TODO: reblog posts
-;; TODO: delete posts
+(defun tumblr-delete-post (id &optional blog)
+  "Delete the post with the given id. args should be as in `tumblr-new-post'."
+  (tumblr-http-oauth-post
+   (tumblr-url "/blog/" (or blog tumblr-blog) "/post/delete")
+   `(("id" . ,id))))
 
-;; TODO: search for tagged posts
+(defun tumblr-tagged (tag &optional before limit filter)
+  (let ((args '()))
+    (aput 'args "tag" tag)
+    (when before (aput 'args "before" before))
+    (when limit (aput 'args "limit" limit))
+    (when filter (aput 'args "filter" filter))
+    (tumblr-http-oauth-post
+     (tumblr-url "/tagged")
+     args)))
