@@ -14,6 +14,8 @@
     (define-key tumblesocks-view-mode-map "p" 'tumblesocks-view-previous-post)
     (define-key tumblesocks-view-mode-map (kbd "RET") 'tumblesocks-view-post-at-point)
     (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog-at-point)
+    (define-key tumblesocks-view-mode-map "d" 'tumblesocks-view-delete-post-at-point)
+    (define-key tumblesocks-view-mode-map "e" 'tumblesocks-view-edit-post-at-point)
     (define-key tumblesocks-view-mode-map "f" 'tumblesocks-view-follow-blog-at-point)
     (define-key tumblesocks-view-mode-map "l" 'tumblesocks-view-like-post-at-point)
     tumblesocks-view-mode-map))
@@ -64,6 +66,21 @@
                                      (concat blog-name ".tumblr.com")
                                      "?"))
          (tumblesocks-unfollow-blog (concat blog-name ".tumblr.com")))))))
+
+(defun tumblesocks-view-delete-post-at-point ()
+  (interactive)
+  (when (yes-or-no-p "Really try to delete this post? ")
+    (tumblesocks-api-delete-post
+     (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))
+    (message "Post deleted.")))
+
+(defun tumblesocks-view-edit-post-at-point ()
+  (interactive)
+  (when (yes-or-no-p "Really try to edit this post? ")
+    (tumblesocks-compose-edit-post
+     (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))))
+
+
 
 (define-derived-mode tumblesocks-view-mode fundamental-mode "Tumblr"
   "Major mode for reading Tumblr blogs."
@@ -275,7 +292,7 @@ This function internally dispatches to other functions that are better suited to
          (notes (cdr (assq 'notes post))))
     (tumblesocks-view-prepare-buffer
      (format "Viewing post %s: %s"
-             (cdr (assq 'title (cdr (assq 'blog blog))))
+             (cdr (assq 'blog_name post))
              post_id))
     (tumblesocks-view-render-post post t)
     (tumblesocks-view-render-notes notes)
@@ -333,7 +350,6 @@ This function internally dispatches to other functions that are better suited to
   (setq tumblesocks-view-refresh-action
         `(lambda () (tumblesocks-view-posts-tagged ,tag))))
 
-;; delete / edit MY posts from tumblesocks-view
 ;; tumblesocks-view should have pagination
 ;; reblog posts from tumblesocks-view (how do notes work?)
      ;; only fetch reblog info when reblogging

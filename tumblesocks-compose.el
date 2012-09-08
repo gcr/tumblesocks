@@ -38,7 +38,7 @@
 (defun tumblesocks-compose-new-post ()
   "Open a new buffer containing a fresh post to begin authoring."
   (interactive)
-  (pop-to-buffer "*Tumblr: New post")
+  (pop-to-buffer "*Tumblr: New post*")
   (erase-buffer)
   (tumblesocks-compose-mode)
   (setq header-line-format "New tumblr post"))
