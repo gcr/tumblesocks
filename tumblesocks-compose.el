@@ -1,8 +1,8 @@
-(require 'tumblrsocks-user)
-(require 'tumblrsocks-api)
+(require 'tumblesocks-user)
+(require 'tumblesocks-api)
 (require 'htmlize)
 (require 'markdown-mode)
-(provide 'tumblrsocks-compose)
+(provide 'tumblesocks-compose)
 
 ;; Tumblr compose mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -123,7 +123,3 @@ post buffer"
           (buffer-string))
     (tumblesocks-api-edit-post tumblesocks-compose-editing-id tumblesocks-compose-editing-args)
     (message "Post edited.")))
-
-;; Begin composing from things in region
-;; Begin composing from fontlock-highlighted things in region
-;; Insert new fontlock-highlighted region into buffer at point
