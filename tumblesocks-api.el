@@ -300,6 +300,6 @@ If you're making a text post, for example, args should be something like
     (when before (aput 'args "before" before))
     (when limit (aput 'args "limit" limit))
     (when filter (aput 'args "filter" filter))
-    (tumblesocks-api-http-oauth-post
+    (tumblesocks-api-http-apikey-get
      (tumblesocks-api-url "/tagged")
      args)))

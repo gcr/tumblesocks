@@ -13,6 +13,8 @@
     (define-key tumblesocks-view-mode-map "g" 'tumblesocks-view-refresh)
     (define-key tumblesocks-view-mode-map "p" 'tumblesocks-view-previous-post)
     (define-key tumblesocks-view-mode-map (kbd "RET") 'tumblesocks-view-post-at-point)
+    (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog-at-point)
+    (define-key tumblesocks-view-mode-map "f" 'tumblesocks-view-follow-blog-at-point)
     (define-key tumblesocks-view-mode-map "l" 'tumblesocks-view-like-post-at-point)
     tumblesocks-view-mode-map))
 
@@ -41,6 +43,27 @@
   (when (get-text-property (point) 'tumblesocks-post-data)
     (tumblesocks-view-post
      (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))))
+
+(defun tumblesocks-view-blog-at-point ()
+  (interactive)
+  (when (get-text-property (point) 'tumblesocks-post-data)
+    (let ((blog-name (cdr (assq 'blog_name (get-text-property (point) 'tumblesocks-post-data)))))
+      (tumblesocks-view-blog (concat blog-name ".tumblr.com")))))
+
+(defun tumblesocks-view-follow-blog-at-point (follow-p)
+  "Follow the blog at point. With prefix arg, UNfollow the blog at point."
+  (interactive "P")
+  (when (get-text-property (point) 'tumblesocks-post-data)
+    (let ((blog-name (cdr (assq 'blog_name (get-text-property (point) 'tumblesocks-post-data)))))
+      (if (not follow-p)
+          (when (yes-or-no-p (concat "Really follow "
+                                     (concat blog-name ".tumblr.com")
+                                     "?"))
+            (tumblesocks-follow-blog (concat blog-name ".tumblr.com")))
+       (when (yes-or-no-p (concat "Really UN-follow "
+                                     (concat blog-name ".tumblr.com")
+                                     "?"))
+         (tumblesocks-unfollow-blog (concat blog-name ".tumblr.com")))))))
 
 (define-derived-mode tumblesocks-view-mode fundamental-mode "Tumblr"
   "Major mode for reading Tumblr blogs."
@@ -80,8 +103,6 @@ This function internally dispatches to other functions that are better suited to
 
 (defun tumblesocks-view-render-post (post &optional verbose-header)
   "Render the post into the current buffer."
-  (message "---- ")
-  (message (format "%S" post))
   (let ((blog_name (cdr-safe (assq 'blog_name post)))
         (id (cdr-safe (assq 'id post)))
         (post_url (cdr-safe (assq 'post_url post)))
@@ -142,7 +163,7 @@ This function internally dispatches to other functions that are better suited to
      (question (tumblesocks-view-insert-html-fragment question t))
      (t (insert " ")))
     ;; Notes
-    (when (> note_count 0)
+    (when (and note_count (> note_count 0))
       (insert " (" (format "%d" note_count) " note"
               (if (= 1 note_count) "" "s") ")"))
     (insert "\n")
@@ -301,11 +322,21 @@ This function internally dispatches to other functions that are better suited to
         (tumblesocks-api-user-unlike post_id reblog_key)
         (message "Unliked this post.")))))
 
+(defun tumblesocks-view-posts-tagged (tag)
+  "Search for posts with the given tag"
+  (interactive "sSearch for posts with tag: ")
+  (tumblesocks-view-prepare-buffer
+   (concat "Tag search: " tag))
+  (tumblesocks-view-render-blogdata
+   (tumblesocks-api-tagged tag nil nil "html"))
+  (tumblesocks-view-finishrender)
+  (setq tumblesocks-view-refresh-action
+        `(lambda () (tumblesocks-view-posts-tagged ,tag))))
+
 ;; delete / edit MY posts from tumblesocks-view
 ;; tumblesocks-view should have pagination
 ;; reblog posts from tumblesocks-view (how do notes work?)
      ;; only fetch reblog info when reblogging
-;; search tagged posts
 
 ;; documentation
 ;; better authentication
