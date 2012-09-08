@@ -1,6 +1,7 @@
 ;; tumblesocks-view.el -- Provide an interface to view tumblr blog posts.
 
 (require 'tumblesocks-api)
+(require 'shr)
 (provide 'tumblesocks-view)
 
 (defvar tumblesocks-view-mode-map
@@ -25,8 +26,21 @@
 
 (define-derived-mode tumblesocks-view-mode fundamental-mode "Tumblr"
   "Major mode for reading Tumblr blogs."
-  (visual-line-mode t)
-  )
+  ;;(visual-line-mode t) ;shr.el takes care of this...
+)
+
+(defun tumblesocks-view-insert-html-fragment (html-fragment &optional inline)
+  "Renders and inserts an HTML fragment. If inline is t, then <p> tags will have no effect."
+  (let (html-frag-parsed)
+    (with-temp-buffer
+      (insert html-fragment)
+      (setq html-frag-parsed (libxml-parse-html-region (point-min) (point-max))))
+    (let ((shr-width nil))
+      (if inline
+          (flet ((shr-ensure-paragraph () 0))
+            ;; disable newlines, for now ...
+            (shr-insert-document html-frag-parsed))
+        (shr-insert-document html-frag-parsed)))))
 
 (defun tumblesocks-view-render-blogdata (blogdata)
   "Render blogdata into the current buffer.
@@ -91,9 +105,13 @@ This function internally dispatches to other functions that are better suited to
     (setq begin (point))
     (insert blog_name ":")
     (setq end_bname (point))
-    (message (format "%d to %d" begin end_bname))
     ;; Title
-    (insert " " (or title caption question " "))
+    (insert " ")
+    (cond
+     (title (tumblesocks-view-insert-html-fragment title t))
+     (caption (tumblesocks-view-insert-html-fragment caption t))
+     (question (tumblesocks-view-insert-html-fragment question t))
+     (t (insert " ")))
     ;; Notes
     (when (> note_count 0)
       (insert " (" (format "%d" note_count) " note"
@@ -112,7 +130,8 @@ This function internally dispatches to other functions that are better suited to
                              'highlight))))
 
 (defun tumblesocks-view-insert-text ()
-  (insert body "\n"))
+  (tumblesocks-view-insert-html-fragment body)
+  (insert "\n"))
 
 (defun tumblesocks-view-insert-i-have-no-clue-what-this-is ()
   (let ((begin (point)))
@@ -141,7 +160,7 @@ This function internally dispatches to other functions that are better suited to
      (cdr (assq 'title (cdr (assq 'blog (tumblesocks-api-blog-info))))))
     (tumblesocks-view-render-blogdata
      (cdr (assq 'posts
-                (tumblesocks-api-blog-posts nil nil nil nil nil nil nil "text"))))
+                (tumblesocks-api-blog-posts nil nil nil nil nil nil nil "html"))))
     (tumblesocks-view-finishrender)))
 
 (defun tumblesocks-view-my-blog ()
@@ -151,5 +170,14 @@ This function internally dispatches to other functions that are better suited to
    (cdr (assq 'title (cdr (assq 'blog (tumblesocks-api-blog-info))))))
   (tumblesocks-view-render-blogdata
    (cdr (assq 'posts
-              (tumblesocks-api-blog-posts nil nil nil nil nil nil nil "text"))))
+              (tumblesocks-api-blog-posts nil nil nil nil nil t nil "html"))))
+  (tumblesocks-view-finishrender))
+
+(defun tumblesocks-view-dashboard ()
+  "View your dashboard"
+  (interactive)
+  (tumblesocks-view-prepare-buffer "Dashboard")
+  (tumblesocks-view-render-blogdata
+   (cdr (assq 'posts
+              (tumblesocks-api-user-dashboard nil nil nil nil t nil))))
   (tumblesocks-view-finishrender))
