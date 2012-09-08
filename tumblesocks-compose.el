@@ -82,13 +82,16 @@ post buffer"
   "Open a new buffer containing a fresh post to begin authoring."
   (interactive "sPost ID: ")
   (let* ((returned-posts
-          (cdr (assq 'posts
+          (cdr-safe (assq 'posts
                      (tumblesocks-api-blog-posts nil post-id nil "1"
                                             nil nil nil "raw"))))
          (the-post (elt returned-posts 0))
-         (title (cdr (assq 'title the-post)))
-         (id (format "%d" (cdr (assq 'id the-post))))
-         (body (cdr (assq 'body the-post))))
+         (type (cdr-safe (assq 'type the-post)))
+         (title (cdr-safe (assq 'title the-post)))
+         (id (format "%d" (cdr-safe (assq 'id the-post))))
+         (body (cdr-safe (assq 'body the-post))))
+    (unless (string= type "text")
+      (error "We can only edit text posts."))
     (pop-to-buffer (concat "*Tumblr: Ediitng " title "*"))
     (erase-buffer)
     (tumblesocks-compose-mode)

@@ -5,6 +5,10 @@
 (require 'shr)
 (provide 'tumblesocks-view)
 
+(defcustom tumblesocks-posts-per-page 20
+  "How many posts per page to show"
+  :type 'number)
+
 (defvar tumblesocks-view-mode-map
   (let ((tumblesocks-view-mode-map (make-keymap)))
     (define-key tumblesocks-view-mode-map "q" 'quit-window)
@@ -22,15 +26,27 @@
 
 (defun tumblesocks-view-previous-post ()
   (interactive)
-  (when (get-text-property (point) 'tumblesocks-post-data)
+  (cond
+   ((get-text-property (point) 'tumblesocks-post-data)
     (goto-char (previous-single-property-change (point) 'tumblesocks-post-data
-                                            nil (point-min)))))
+                                            nil (point-min))))
+   ((eq 'forward (button-get (button-at (point)) 'tumblesocks-direction))
+    (goto-char (previous-single-property-change (point) 'tumblesocks-post-data
+                                            nil (point-min))))
+   ((eq 'back (button-get (button-at (point)) 'tumblesocks-direction))
+    (button-activate (button-at (point))))))
 
 (defun tumblesocks-view-next-post ()
   (interactive)
-  (when (get-text-property (point) 'tumblesocks-post-data)
+  (cond
+   ((get-text-property (point) 'tumblesocks-post-data)
     (goto-char (next-single-property-change (point) 'tumblesocks-post-data
-                                            nil (- (point-max) 1)))))
+                                            nil (- (point-max) 1))))
+   ((eq 'forward (button-get (button-at (point)) 'tumblesocks-direction))
+    (button-activate (button-at (point))))
+   ((eq 'back (button-get (button-at (point)) 'tumblesocks-direction))
+    (goto-char (next-single-property-change (point) 'tumblesocks-post-data
+                                            nil (- (point-max) 1))))))
 
 (defvar tumblesocks-view-refresh-action nil)
 
@@ -82,9 +98,12 @@
 
 
 
+(defvar tumblesocks-view-current-offset 0)
+
 (define-derived-mode tumblesocks-view-mode fundamental-mode "Tumblr"
   "Major mode for reading Tumblr blogs."
   (make-local-variable 'tumblesocks-view-refresh-action)
+  (make-local-variable 'tumblesocks-view-current-offset)
   ;;(visual-line-mode t) ;shr.el takes care of this...
 )
 
@@ -105,7 +124,37 @@
     (tumblesocks-view-insert-parsed-html-fragment html-frag-parsed inline)))
 
 
-(defun tumblesocks-view-render-blogdata (blogdata)
+(defun tumblesocks-view-insert-prevpage-button ()
+  (insert-button "[<< Previous Page...]"
+                 'action 'tumblesocks-view-previous-page-button-action
+                 'tumblesocks-direction 'back)
+  (insert "\n"))
+(defun tumblesocks-view-insert-nextpage-button ()
+  (insert-button "[Next Page... >>]"
+                 'action 'tumblesocks-view-next-page-button-action
+                 'tumblesocks-direction 'forward))
+
+(defun tumblesocks-view-previous-page-button-action (button)
+  (tumblesocks-view-previous-page))
+(defun tumblesocks-view-previous-page ()
+  (interactive)
+  (setq tumblesocks-view-current-offset
+        (max
+         (- tumblesocks-view-current-offset tumblesocks-posts-per-page)
+         0))
+  (tumblesocks-view-refresh)
+  (goto-char (point-max))
+  (previous-line)
+  (tumblesocks-view-previous-post))
+(defun tumblesocks-view-next-page-button-action (button)
+  (tumblesocks-view-next-page))
+(defun tumblesocks-view-next-page ()
+  (interactive)
+  (setq tumblesocks-view-current-offset
+         (+ tumblesocks-view-current-offset tumblesocks-posts-per-page))
+  (tumblesocks-view-refresh))
+
+(defun tumblesocks-view-render-blogdata (blogdata total-posts)
   "Render blogdata into the current buffer.
 
 Blogdata should be the JSON result of a call to Tumblr's
@@ -113,10 +162,21 @@ Blogdata should be the JSON result of a call to Tumblr's
 blogdata to be filtered with the 'text' filter.)
 
 This function internally dispatches to other functions that are better suited to inserting each post."
-  ; See http://www.tumblr.com/docs/en/api/v2#posts for more
-  ; info about the post API.
-  (dolist (post (append blogdata nil))
-    (tumblesocks-view-render-post post)))
+  ;; See http://www.tumblr.com/docs/en/api/v2#posts for more
+  ;; info about the post API.
+  (when (> tumblesocks-view-current-offset 0)
+    (tumblesocks-view-insert-prevpage-button))
+  (if (> (length blogdata) 0)
+      (progn
+        (dolist (post (append blogdata nil))
+          (tumblesocks-view-render-post post))
+        ;; Pagination button anyone?
+        (if (> total-posts (+ tumblesocks-view-current-offset
+                              (length blogdata)))
+            (tumblesocks-view-insert-nextpage-button)))
+    (let ((start (point)))
+      (insert "No posts.\n")
+      (put-text-property start (point) 'face font-lock-comment-face))))
 
 (defun tumblesocks-view-render-post (post &optional verbose-header)
   "Render the post into the current buffer."
@@ -252,7 +312,10 @@ This function internally dispatches to other functions that are better suited to
   (pop-to-buffer-same-window (concat "*Tumblr: " blogtitle "*"))
   (setq buffer-read-only nil)
   (erase-buffer)
-  (tumblesocks-view-mode))
+  ;; We must save the current pagination offset...
+  (let ((offset tumblesocks-view-current-offset))
+    (tumblesocks-view-mode)
+    (setq tumblesocks-view-current-offset offset)))
 (defun tumblesocks-view-finishrender ()
   "Finish creating the blog buffer, ready to present to the user"
   (set-buffer-modified-p nil)
@@ -262,12 +325,15 @@ This function internally dispatches to other functions that are better suited to
 (defun tumblesocks-view-blog (blogname)
   "View the given blog (URL or name)"
   (interactive (list (read-string "Blog to view: " tumblesocks-blog)))
-  (let ((tumblesocks-blog blogname))
+  (let* ((tumblesocks-blog blogname) ; dynamic binding the blog!
+         (returned-data (tumblesocks-api-blog-posts
+                         nil nil nil tumblesocks-posts-per-page
+                         tumblesocks-view-current-offset nil nil "html")))
     (tumblesocks-view-prepare-buffer
      (cdr (assq 'title (cdr (assq 'blog (tumblesocks-api-blog-info))))))
     (tumblesocks-view-render-blogdata
-     (cdr (assq 'posts
-                (tumblesocks-api-blog-posts nil nil nil nil nil nil nil "html"))))
+     (cdr (assq 'posts returned-data))
+     (cdr (assq 'total_posts returned-data)))
     (tumblesocks-view-finishrender)
     (setq tumblesocks-view-refresh-action
           `(lambda () (tumblesocks-view-blog ,blogname))))) ; <-- CLOSURE HACK :p
@@ -276,12 +342,15 @@ This function internally dispatches to other functions that are better suited to
   "View your dashboard"
   (interactive)
   (tumblesocks-view-prepare-buffer "Dashboard")
-  (tumblesocks-view-render-blogdata
-   (cdr (assq 'posts
-              (tumblesocks-api-user-dashboard nil nil nil nil nil nil))))
-  (tumblesocks-view-finishrender)
-  (setq tumblesocks-view-refresh-action
-        '(lambda () (tumblesocks-view-dashboard))))
+  (let ((dashboard-data (tumblesocks-api-user-dashboard
+                         tumblesocks-posts-per-page
+                         tumblesocks-view-current-offset nil nil nil nil)))
+    (tumblesocks-view-render-blogdata
+     (cdr (assq 'posts dashboard-data))
+     99999) ; allow them to browse practically infinite posts
+    (tumblesocks-view-finishrender)
+    (setq tumblesocks-view-refresh-action
+          '(lambda () (tumblesocks-view-dashboard)))))
 
 (defun tumblesocks-view-post (post_id)
   "View a post in its own dedicated buffer, with notes"
@@ -345,7 +414,8 @@ This function internally dispatches to other functions that are better suited to
   (tumblesocks-view-prepare-buffer
    (concat "Tag search: " tag))
   (tumblesocks-view-render-blogdata
-   (tumblesocks-api-tagged tag nil nil "html"))
+   (tumblesocks-api-tagged tag nil nil "html")
+   0) ; don't allow them to browse next (this isn't possible in general anyways)
   (tumblesocks-view-finishrender)
   (setq tumblesocks-view-refresh-action
         `(lambda () (tumblesocks-view-posts-tagged ,tag))))
