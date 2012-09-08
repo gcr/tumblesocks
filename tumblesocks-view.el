@@ -11,6 +11,18 @@
     (define-key tumblesocks-view-mode-map "p" 'tumblesocks-view-previous-post)
     tumblesocks-view-mode-map))
 
+(defun tumblesocks-view-previous-post ()
+  (interactive)
+  (when (get-text-property (point) 'tumblesocks-post-data)
+    (goto-char (previous-single-property-change (point) 'tumblesocks-post-data
+                                            nil (point-min)))))
+
+(defun tumblesocks-view-next-post ()
+  (interactive)
+  (when (get-text-property (point) 'tumblesocks-post-data)
+    (goto-char (next-single-property-change (point) 'tumblesocks-post-data
+                                            nil (- (point-max) 1)))))
+
 (define-derived-mode tumblesocks-view-mode fundamental-mode "Tumblr"
   "Major mode for reading Tumblr blogs."
   (visual-line-mode t)
@@ -74,32 +86,19 @@ This function internally dispatches to other functions that are better suited to
                            'tumblesocks-post-data
                            post)))))
 
-(defun tumblesocks-view-previous-post ()
-  (interactive)
-  (when (get-text-property (point) 'tumblesocks-post-data)
-    (goto-char (previous-single-property-change (point) 'tumblesocks-post-data
-                                            nil (point-min)))))
-
-(defun tumblesocks-view-next-post ()
-  (interactive)
-  (when (get-text-property (point) 'tumblesocks-post-data)
-    (goto-char (next-single-property-change (point) 'tumblesocks-post-data
-                                            nil (- (point-max) 1)))))
-
-(defun tumblesocks-view-insert-i-have-no-clue-what-this-is ()
-  (let ((begin (point)))
-    (insert "this is a " (format "%S" type) "\n")
-    (put-text-property begin (point) 'face font-lock-comment-face)))
-
 (defun tumblesocks-view-insert-header (&optional verbose)
   (let (begin end_bname)
     (setq begin (point))
     (insert blog_name ":")
     (setq end_bname (point))
     (message (format "%d to %d" begin end_bname))
-    (insert " " (or title caption question " -- ") ; Title
-            " (" (format "%d" note_count) " note" ; Notes
-            (if (= 1 note_count) "" "s") ")\n")
+    ;; Title
+    (insert " " (or title caption question " "))
+    ;; Notes
+    (when (> note_count 0)
+      (insert " (" (format "%d" note_count) " note"
+              (if (= 1 note_count) "" "s") ")"))
+    (insert "\n")
     (when verbose
       (insert
             date " " (mapconcat '(lambda (x) (concat "#" x)) tags ", ")
@@ -115,10 +114,16 @@ This function internally dispatches to other functions that are better suited to
 (defun tumblesocks-view-insert-text ()
   (insert body "\n"))
 
+(defun tumblesocks-view-insert-i-have-no-clue-what-this-is ()
+  (let ((begin (point)))
+    (insert "this is a " (format "%S" type) "\n")
+    (put-text-property begin (point) 'face font-lock-comment-face)))
+
 
+
 (defun tumblesocks-view-prepare-buffer (blogtitle)
   "Create a new buffer to begin viewing a blog."
-  (pop-to-buffer (concat "*Tumblr: " blogtitle "*"))
+  (pop-to-buffer-same-window (concat "*Tumblr: " blogtitle "*"))
   (setq buffer-read-only nil)
   (erase-buffer)
   (tumblesocks-view-mode))
