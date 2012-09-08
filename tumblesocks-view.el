@@ -29,18 +29,22 @@
   ;;(visual-line-mode t) ;shr.el takes care of this...
 )
 
+(defun tumblesocks-view-insert-parsed-html-fragment (html-frag-parsed &optional inline)
+  "Renders and inserts an HTML sexp. If inline is t, then <p> tags will have no effect."
+  (let ((shr-width nil))
+    (if inline
+        (flet ((shr-ensure-paragraph () 0))
+          ;; disable newlines, for now ...
+          (shr-insert-document html-frag-parsed))
+      (shr-insert-document html-frag-parsed))))
 (defun tumblesocks-view-insert-html-fragment (html-fragment &optional inline)
   "Renders and inserts an HTML fragment. If inline is t, then <p> tags will have no effect."
   (let (html-frag-parsed)
     (with-temp-buffer
       (insert html-fragment)
       (setq html-frag-parsed (libxml-parse-html-region (point-min) (point-max))))
-    (let ((shr-width nil))
-      (if inline
-          (flet ((shr-ensure-paragraph () 0))
-            ;; disable newlines, for now ...
-            (shr-insert-document html-frag-parsed))
-        (shr-insert-document html-frag-parsed)))))
+    (tumblesocks-view-insert-parsed-html-fragment html-frag-parsed inline)))
+
 
 (defun tumblesocks-view-render-blogdata (blogdata)
   "Render blogdata into the current buffer.
@@ -91,7 +95,7 @@ This function internally dispatches to other functions that are better suited to
           ;;("answer" (tumblesocks-view-insert-answer))
           ;;("video" (tumblesocks-view-insert-video))
           ;;("audio" (tumblesocks-view-insert-audio))
-          ;;("photo" (tumblesocks-view-insert-photo))
+          ("photo" (tumblesocks-view-insert-photo))
           ;;("chat" (tumblesocks-view-insert-chat))
           (t (tumblesocks-view-insert-i-have-no-clue-what-this-is)))
         (insert "\n")
@@ -132,6 +136,20 @@ This function internally dispatches to other functions that are better suited to
 (defun tumblesocks-view-insert-text ()
   (tumblesocks-view-insert-html-fragment body)
   (insert "\n"))
+
+(defun tumblesocks-view-insert-photo ()
+  (let ((photo-html-frag
+         `(p () .
+             ,(apply 'append
+                     (mapcar
+                      '(lambda (photdata)
+                         (let* ((alts (cdr (assq 'alt_sizes photdata)))
+                                (alt (elt alts 0)))
+                           (list (cdr (assq 'caption photdata))
+                                 `(img ((src . ,(cdr (assq 'url alt))))))))
+                      photos)))))
+    (tumblesocks-view-insert-parsed-html-fragment photo-html-frag)
+    (insert "\n")))
 
 (defun tumblesocks-view-insert-i-have-no-clue-what-this-is ()
   (let ((begin (point)))
