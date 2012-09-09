@@ -11,9 +11,9 @@ Viewing blogs
 The main entry point is `tumblesocks-view-dashboard`, which will
 open up a list of posts from your dashboard.
 
-Keys:
+Use these keys to jump around:
 
-* Move between next and previous posts quickly with **n** and **p**.
+* **n and p**: Move quickly to the next and previous posts
 * **q: Quit**; go back to what you were doing before.
 
 Visiting each post:
@@ -42,6 +42,8 @@ tumblr account. This process is a bit convoluted, but you only have to
 do it once.
 
 First, add the following to your .emacs:
+
+    (require 'tumblesocks)
 
     (setq tumblesocks-blog "YourBlogName.tumblr.com")
 
