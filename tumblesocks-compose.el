@@ -1,5 +1,4 @@
 
-(require 'assoc)
 (require 'tumblesocks-user)
 (require 'tumblesocks-api)
 (require 'htmlize)
@@ -97,6 +96,14 @@ post buffer"
 
 
 
+(defun tumblesocks-plist-delete (plist prop)
+  "Delete PROPERTY from PLIST."
+  (let ((p (memq prop plist)))
+    (if (not p)
+        plist
+      (setcdr p (cddr p))
+      (delq prop plist))))
+
 (defun tumblesocks-compose-edit-post (post-id &optional continuation)
   "Open a new buffer containing a fresh post to begin authoring.
 
@@ -104,14 +111,15 @@ Once you're ready to finish editing, press C-c C-c. You will be
 prompted for a new title and new tags."
   (interactive "sPost ID: ")
   (let* ((returned-posts
-          (cdr-safe (assq 'posts
-                     (tumblesocks-api-blog-posts nil post-id nil "1"
-                                            nil nil nil "raw"))))
-         (the-post (elt returned-posts 0))
-         (type (cdr-safe (assq 'type the-post)))
-         (title (cdr-safe (assq 'title the-post)))
-         (id (format "%d" (cdr-safe (assq 'id the-post))))
-         (body (cdr-safe (assq 'body the-post))))
+          (plist-get
+           (tumblesocks-api-blog-posts nil post-id nil "1"
+                                       nil nil nil "raw")
+           :posts))
+         (the-post (car returned-posts))
+         (type (plist-get the-post :type))
+         (title (plist-get the-post :title))
+         (id (format "%d" (plist-get the-post :id)))
+         (body (plist-get the-post :body)))
     (unless (string= type "text")
       (error "We can only edit text posts."))
     (pop-to-buffer (concat "*Tumblr: Ediitng " title "*"))
@@ -120,13 +128,16 @@ prompted for a new title and new tags."
     (setq header-line-format (concat "Editing: " title))
     (setq tumblesocks-compose-editing-args the-post)
     (setq tumblesocks-compose-editing-id id)
-    (aput 'tumblesocks-compose-editing-args
-          'tags
-          (mapconcat 'identity (cdr (assq 'tags tumblesocks-compose-editing-args)) ","))
-    (delq (assq 'format tumblesocks-compose-editing-args)
-          tumblesocks-compose-editing-args)
-    (delq (assq 'id tumblesocks-compose-editing-args)
-          tumblesocks-compose-editing-args)
+    (setq tumblesocks-compose-editing-args
+          (plist-put tumblesocks-compose-editing-args
+                     :tags
+                     (mapconcat 'identity
+                                (plist-get tumblesocks-compose-editing-args :tags)
+                                ",")))
+    (setq tumblesocks-compose-editing-args
+          (tumblesocks-plist-delete tumblesocks-compose-editing-args :format))
+    (setq tumblesocks-compose-editing-args
+          (tumblesocks-plist-delete tumblesocks-compose-editing-args :id))
     (setq tumblesocks-compose-finish-action 'tumblesocks-compose-edit-finish)
     (insert body)
     (goto-char (point-min))
@@ -135,17 +146,19 @@ prompted for a new title and new tags."
 (defun tumblesocks-compose-edit-finish ()
   "Finish editing the given post"
   ;; Optionally prompt for title
-  (let ((new-title (read-string "New title: " (cdr (assq 'title tumblesocks-compose-editing-args))))
-        (new-tags (read-string "New tags: " (cdr (assq 'tags tumblesocks-compose-editing-args)))))
+  (let ((new-title (read-string "New title: " (plist-get tumblesocks-compose-editing-args :title)))
+        (new-tags (read-string "New tags: " (plist-get tumblesocks-compose-editing-args :tags))))
     ;; Set tags
     (when (and new-tags (string= new-tags "")) (setq new-tags nil))
     (when (string= new-title "") (error "You must provide a title."))
-    (aput 'tumblesocks-compose-editing-args 'title new-title)
+    (setq tumblesocks-compose-editing-args
+          (plist-put tumblesocks-compose-editing-args :title new-title))
     (if (string= "" new-tags)
-        (delq (assq 'tags tumblesocks-compose-editing-args) tumblesocks-compose-editing-args)
-      (aput 'tumblesocks-compose-editing-args 'tags new-tags))
-    (aput 'tumblesocks-compose-editing-args
-          'body
-          (buffer-string))
+        (setq tumblesocks-compose-editing-args
+              (tumblesocks-plist-delete tumblesocks-compose-editing-args :tags))
+      (setq tumblesocks-compose-editing-args
+            (plist-put tumblesocks-compose-editing-args :tags new-tags)))
+    (setq tumblesocks-compose-editing-args
+          (plist-put tumblesocks-compose-editing-args :body (buffer-string)))
     (tumblesocks-api-edit-post tumblesocks-compose-editing-id tumblesocks-compose-editing-args)
     (message "Post edited.")))

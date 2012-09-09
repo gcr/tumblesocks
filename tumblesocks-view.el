@@ -1,6 +1,5 @@
 ;; tumblesocks-view.el -- Provide an interface to view tumblr blog posts.
 
-(require 'assoc)
 (require 'tumblesocks-api)
 (require 'tumblesocks-compose)
 (require 'shr)
@@ -36,6 +35,7 @@
   (tumblesocks-compose-new-post 'tumblesocks-view-refresh))
 
 (defun tumblesocks-view-previous-post ()
+  "Go to the previous post or the previous page if we're at the beginning."
   (interactive)
   (cond
    ((get-text-property (point) 'tumblesocks-post-data)
@@ -53,6 +53,7 @@
    (t (previous-line))))
 
 (defun tumblesocks-view-next-post ()
+  "Go to the next post or the next page if we're at the end."
   (interactive)
   (cond
    ((get-text-property (point) 'tumblesocks-post-data)
@@ -70,27 +71,33 @@
 (defvar tumblesocks-view-refresh-action nil)
 
 (defun tumblesocks-view-refresh ()
+  "Refresh our view of posts (download new ones)"
   (interactive)
   (when tumblesocks-view-refresh-action
     (funcall tumblesocks-view-refresh-action)))
 
 (defun tumblesocks-view-post-at-point ()
+  "Open the post under point in a new buffer, showing notes, etc"
   (interactive)
   (when (get-text-property (point) 'tumblesocks-post-data)
     (tumblesocks-view-post
-     (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))))
+     (plist-get (get-text-property (point) 'tumblesocks-post-data) :id))))
 
 (defun tumblesocks-view-post-url-at-point ()
+  "Open the post under point in your browser"
   (interactive)
   (when (get-text-property (point) 'tumblesocks-post-data)
-    (let ((post_url (cdr (assq 'post_url (get-text-property (point) 'tumblesocks-post-data)))))
+    (let ((post_url (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                               :post_url)))
       (browse-url post_url)
       (message (concat "Opening " post_url " in your browser...")))))
 
 (defun tumblesocks-view-yank-post-url-at-point ()
+  "Copy the URL of the post under point to the kill ring"
   (interactive)
   (when (get-text-property (point) 'tumblesocks-post-data)
-    (let ((post_url (cdr (assq 'post_url (get-text-property (point) 'tumblesocks-post-data)))))
+    (let ((post_url (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                                :post_url)))
       (kill-new post_url)
       (message (concat "Yanked " post_url)))))
 
@@ -98,22 +105,24 @@
   "Follow the blog at point. With prefix arg, UNfollow the blog at point."
   (interactive "P")
   (when (get-text-property (point) 'tumblesocks-post-data)
-    (let ((blog-name (cdr (assq 'blog_name (get-text-property (point) 'tumblesocks-post-data)))))
+    (let ((blog-name (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                                :blog_name)))
       (if (not follow-p)
           (when (yes-or-no-p (concat "Really follow "
                                      (concat blog-name ".tumblr.com")
                                      "?"))
             (tumblesocks-follow-blog (concat blog-name ".tumblr.com")))
-       (when (yes-or-no-p (concat "Really UN-follow "
-                                     (concat blog-name ".tumblr.com")
-                                     "?"))
-         (tumblesocks-unfollow-blog (concat blog-name ".tumblr.com")))))))
+        (when (yes-or-no-p (concat "Really UN-follow "
+                                   (concat blog-name ".tumblr.com")
+                                   "?"))
+          (tumblesocks-unfollow-blog (concat blog-name ".tumblr.com")))))))
 
 (defun tumblesocks-view-delete-post-at-point ()
   (interactive)
   (when (yes-or-no-p "Really try to delete this post? ")
     (tumblesocks-api-delete-post
-     (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))
+     (format "%d"
+             (plist-get (get-text-property (point) 'tumblesocks-post-data) :id)))
     (message "Post deleted.")
     (let ((pos (point)))
       (tumblesocks-view-refresh)
@@ -123,11 +132,12 @@
   (interactive)
   (when (yes-or-no-p "Really try to edit this post? ")
     (tumblesocks-compose-edit-post
-     (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data)))
-     '(lambda ()
-        (let ((pos (point)))
-          (tumblesocks-view-refresh)
-          (goto-char pos))))))
+     (format "%d"
+             (plist-get (get-text-property (point) 'tumblesocks-post-data) :id)))
+    '(lambda ()
+       (let ((pos (point)))
+         (tumblesocks-view-refresh)
+         (goto-char pos)))))
 
 (defun tumblesocks-view-reblog-post-at-point ()
   "Reblog the post at point, if there is one."
@@ -135,18 +145,20 @@
   (when (get-text-property (point) 'tumblesocks-post-data)
     ;; Get the reblog key.
     (let* ((post_id
-            (format "%d" (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data)))))
+            (format "%d"
+                    (plist-get
+                     (get-text-property (point) 'tumblesocks-post-data) :id)))
            ;; we need to do another API fetch because
            ;; tumblesocks-post-data doesn't have reblog keys, by design
            (blog (tumblesocks-api-blog-posts
                   nil post_id nil "1" nil "true" nil "html"))
-           (post (elt (cdr (assq 'posts blog)) 0))
-           (reblog_key (cdr (assq 'reblog_key post))))
-        (tumblesocks-api-reblog-post
-         post_id reblog_key
-         (read-string "(Optional) comments to add: "))
-        (message "Reblogged.")
-        (tumblesocks-view-refresh))))
+           (post (car (plist-get blog :posts)))
+           (reblog_key (plist-get blog :reblog_key)))
+      (tumblesocks-api-reblog-post
+       post_id reblog_key
+       (read-string "(Optional) comments to add: "))
+      (message "Reblogged.")
+      (tumblesocks-view-refresh))))
 
 
 
@@ -161,7 +173,7 @@
   (make-local-variable 'tumblesocks-view-current-offset)
   (make-local-variable 'tumblesocks-view-content-start)
   ;;(visual-line-mode t) ;shr.el takes care of this...
-)
+  )
 
 (defun tumblesocks-view-insert-parsed-html-fragment (html-frag-parsed &optional inline)
   "Renders and inserts an HTML sexp. If inline is t, then <p> tags will have no effect."
@@ -169,8 +181,13 @@
     (if inline
         (flet ((shr-ensure-paragraph () 0))
           ;; disable newlines, for now ...
-          (shr-insert-document html-frag-parsed))
-      (shr-insert-document html-frag-parsed))))
+          (condition-case nil
+              ;; this must go in the flet, sorry!
+              (shr-insert-document html-frag-parsed)
+            (error (message "Couldn't insert HTML."))))
+      (condition-case nil
+          (shr-insert-document html-frag-parsed)
+        (error (message "Couldn't insert HTML."))))))
 (defun tumblesocks-view-insert-html-fragment (html-fragment &optional inline)
   "Renders and inserts an HTML fragment. If inline is t, then <p> tags will have no effect."
   (let (html-frag-parsed)
@@ -218,7 +235,7 @@ We show `tumblesocks-posts-per-page' posts per page."
 We show `tumblesocks-posts-per-page' posts per page."
   (interactive)
   (setq tumblesocks-view-current-offset
-         (+ tumblesocks-view-current-offset tumblesocks-posts-per-page))
+        (+ tumblesocks-view-current-offset tumblesocks-posts-per-page))
   (tumblesocks-view-refresh))
 
 (defun tumblesocks-view-render-blogdata (blogdata total-posts)
@@ -234,7 +251,7 @@ blogdata to be filtered with the 'text' filter.)"
     (tumblesocks-view-insert-prevpage-button))
   (if (> (length blogdata) 0)
       (progn
-        (dolist (post (append blogdata nil))
+        (dolist (post blogdata)
           (tumblesocks-view-render-post post))
         ;; Pagination button anyone?
         (if (> total-posts (+ tumblesocks-view-current-offset
@@ -244,40 +261,36 @@ blogdata to be filtered with the 'text' filter.)"
       (insert "No posts.\n")
       (put-text-property start (point) 'face font-lock-comment-face))))
 
+;; thanks to jlf who wrote this function: http://paste.lisp.org/display/131689
+(defmacro tumblesocks-bind-plist-keys (plist key-vars &rest body)
+  "Bind each KEY to its associated value in PLIST and execute BODY."
+  (let ((temp (make-symbol "--cl-var--")))
+    `(let* ,(cons (list temp plist)
+                  (mapcar #'(lambda (v)
+                              (list
+                               v
+                               `(plist-get ,temp
+                                           ,(intern (concat ":" (symbol-name v))))))
+                          key-vars))
+	   . ,body)))
+
 (defun tumblesocks-view-render-post (post &optional verbose-header)
   "Render the post into the current buffer.
 
 This function internally dispatches to other functions that are
 better suited to inserting each post."
-  (let ((blog_name (cdr-safe (assq 'blog_name post)))
-        (id (cdr-safe (assq 'id post)))
-        (post_url (cdr-safe (assq 'post_url post)))
-        (type (cdr-safe (assq 'type post)))
-        (date (cdr-safe (assq 'date post)))
-        (reblog_key (cdr-safe (assq 'reblog_key post)))
-        (tags (cdr-safe (assq 'tags post)))
-        (liked (cdr-safe (assq 'liked post)))
-        (note_count (cdr-safe (assq 'note_count post)))
-        ;; For photo posts:
-        (photos (cdr-safe (assq 'photos post)))
-        (caption (cdr-safe (assq 'caption post)))
-        (width (cdr-safe (assq 'width post)))
-        (height (cdr-safe (assq 'height post)))
-        ;; For quote posts:
-        (text (cdr-safe (assq 'text post)))
-        (source (cdr-safe (assq 'source post)))
-        ;; For link posts:
-        (title (cdr-safe (assq 'title post)))
-        (url (cdr-safe (assq 'url post)))
-        (description (cdr-safe (assq 'description post)))
-        ;; For chat posts:
-        (body (cdr-safe (assq 'body post)))
-        (dialogue (cdr-safe (assq 'dialogue post)))
-        ;; For answer posts:
-        (asking_name (cdr-safe (assq 'asking_name post)))
-        (asking_url (cdr-safe (assq 'asking_url post)))
-        (question (cdr-safe (assq 'question post)))
-        (answer (cdr-safe (assq 'answer post))))
+  (tumblesocks-bind-plist-keys post
+    (blog_name id post_url type date reblog_key tags liked note_count
+               ;; For photo posts:
+               photos caption width
+               ;; For quote posts:
+               text source
+               ;; For link posts:
+               title url description
+               ;; For chat posts:
+               body dialogue
+               ;; For answer posts:
+               asking_name asking_url question answer)
     (let ((begin-post-area (point)))
       (tumblesocks-view-insert-header verbose-header)
       (cond
@@ -316,8 +329,9 @@ better suited to inserting each post."
     (insert "\n")
     (when verbose
       (insert
-            "Date: "date "\nTags: " (mapconcat '(lambda (x) (concat "#" x)) tags ", ")
-            "\nPermalink: ")
+       "Date: " date
+       "\nTags: " (mapconcat '(lambda (x) (concat "#" x)) tags ", ")
+       "\nPermalink: ")
       (tumblesocks-view-insert-parsed-html-fragment
        `(a ((href . ,post_url)) ,post_url) t)
       (insert "\n"))
@@ -338,17 +352,18 @@ better suited to inserting each post."
          `(p () .
              ,(apply 'append
                      (mapcar
-                      '(lambda (photdata)
+                      '(lambda (photodata)
                          ;; There could be several photos here, and
                          ;; each photo has several alternative sizes.
                          ;; The first is usually the biggest, the
                          ;; third is a good compromise
-                         (let* ((alts (cdr (assq 'alt_sizes photdata)))
+                         (let* ((alts (plist-get photodata :alt_sizes))
                                 (alt (elt alts (if (> (length alts) 2)
                                                    2
                                                  0))))
-                           (list `(img ((src . ,(cdr (assq 'url alt)))))
-                                 (cdr (assq 'caption photdata)))))
+                           (list `(img ((src . ,(plist-get alt :url))))
+                                 ;;`(br)
+                                 (plist-get photodata :caption))))
                       photos)))))
     (tumblesocks-view-insert-parsed-html-fragment photo-html-frag)
     (when caption
@@ -376,12 +391,12 @@ better suited to inserting each post."
   (insert "\n"))
 
 (defun tumblesocks-view-insert-chat ()
-  (dolist (message (append dialogue nil))
+  (dolist (message dialogue)
     (let ((start (point)))
-      (tumblesocks-view-insert-html-fragment (cdr (assq 'label message)) t)
+      (tumblesocks-view-insert-html-fragment (plist-get message :label) t)
       (put-text-property start (point) 'face '(:weight bold))
       (insert " ")
-      (tumblesocks-view-insert-html-fragment (cdr (assq 'phrase message)) t)
+      (tumblesocks-view-insert-html-fragment (plist-get message :phrase) t)
       (insert "\n"))))
 
 (defun tumblesocks-view-insert-i-have-no-clue-what-this-is ()
@@ -413,34 +428,35 @@ better suited to inserting each post."
           "Blog to view: "
           (if (get-text-property (point) 'tumblesocks-post-data)
               (concat
-               (cdr (assq 'blog_name
-                          (get-text-property (point) 'tumblesocks-post-data)))
+               (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                          :blog_name)
                ".tumblr.com")
             ""))))
   (let* ((tumblesocks-blog blogname) ; dynamic binding the blog!
-         (blog-info (cdr (assq 'blog (tumblesocks-api-blog-info))))
+         (blog-info (plist-get (tumblesocks-api-blog-info) :blog))
          (returned-data (tumblesocks-api-blog-posts
                          nil nil nil tumblesocks-posts-per-page
                          tumblesocks-view-current-offset nil nil "html")))
     (tumblesocks-view-prepare-buffer
-     (cdr (assq 'title blog-info)))
+     (plist-get blog-info :title))
     ;; Draw blog info
     (let ((begin (point)))
       (tumblesocks-view-insert-parsed-html-fragment
        `(img ((src . ,(tumblesocks-api-avatar-url)))) t)
-      (insert (cdr (assq 'title blog-info)) " - " (cdr (assq 'url blog-info)))
+      (insert (plist-get blog-info :title) " - "
+              (plist-get blog-info :url))
       (insert (format "\n%d post%s"
-                      (cdr (assq 'posts blog-info))
-                      (if (= 1 (cdr (assq 'posts blog-info))) "" "s")))
-      (when (cdr (assq 'likes blog-info))
+                      (plist-get blog-info :posts)
+                      (if (= 1 (plist-get blog-info :posts)) "" "s")))
+      (when (plist-get blog-info :likes)
         (insert (format ", %d like%s"
-                        (cdr (assq 'likes blog-info))
-                        (if (= 1 (cdr (assq 'likes blog-info))) "" "s"))))
+                        (plist-get blog-info :likes)
+                        (if (= 1 (plist-get blog-info :likes)) "" "s"))))
       (insert "\n\n")
       (put-text-property begin (point) 'face font-lock-comment-face))
     (tumblesocks-view-render-blogdata
-     (cdr (assq 'posts returned-data))
-     (cdr (assq 'total_posts returned-data)))
+     (plist-get returned-data :posts)
+     (plist-get returned-data :total_posts))
     (tumblesocks-view-finishrender)
     (setq tumblesocks-view-refresh-action
           `(lambda () (tumblesocks-view-blog ,blogname))))) ; <-- CLOSURE HACK :p
@@ -463,7 +479,7 @@ You can browse around, edit, and delete posts from here.
       (insert "\n\n")
       (put-text-property begin (point) 'face font-lock-comment-face))
     (tumblesocks-view-render-blogdata
-     (cdr (assq 'posts dashboard-data))
+     (plist-get dashboard-data :posts)
      99999) ; allow them to browse practically infinite posts
     (tumblesocks-view-finishrender)
     (setq tumblesocks-view-refresh-action
@@ -476,11 +492,11 @@ You can browse around, edit, and delete posts from here.
     (setq post_id (format "%d" post_id)))
   (let* ((blog (tumblesocks-api-blog-posts
                 nil post_id nil "1" nil nil "true" "html"))
-         (post (elt (cdr (assq 'posts blog)) 0))
-         (notes (cdr (assq 'notes post))))
+         (post (car (plist-get blog :posts)))
+         (notes (plist-get post :notes)))
     (tumblesocks-view-prepare-buffer
      (format "Viewing post %s: %s"
-             (cdr (assq 'blog_name post))
+             (plist-get post :blog_name)
              post_id))
     (setq tumblesocks-view-content-start (point-marker))
     (tumblesocks-view-render-post post t)
@@ -493,13 +509,9 @@ You can browse around, edit, and delete posts from here.
   "Render the given notes into the current buffer."
   (let ((start (point)))
     (insert "-- Notes:\n")
-    (dolist (note (append notes nil))
-      (let ((type (cdr-safe (assq 'type note)))
-            (post_id (cdr-safe (assq 'post_id note)))
-            (blog_name (cdr-safe (assq 'blog_name note)))
-            (blog_url (cdr-safe (assq 'blog_url note)))
-            (reply_text (cdr-safe (assq 'reply_text note)))
-            (added_text (cdr-safe (assq 'added_text note))))
+    (dolist (note notes)
+      (tumblesocks-bind-plist-keys note
+        (type post_id blog_name blog_url reply_text added_text)
         (cond ((string= type "posted")
                (insert blog_name " posted this"))
               ((string= type "reblog")
@@ -510,9 +522,9 @@ You can browse around, edit, and delete posts from here.
                (insert blog_name " says: ")
                (tumblesocks-view-insert-html-fragment reply_text t))
               (t (insert (format "%S" note))))
-      (when added_text
-        (insert " (adding text: " added_text ")"))
-      (insert "\n")))
+        (when added_text
+          (insert " (adding text: " added_text ")"))
+        (insert "\n")))
     (put-text-property start (point) 'face font-lock-comment-face)))
 
 (defun tumblesocks-view-like-post-at-point (like-p)
@@ -521,11 +533,13 @@ You can browse around, edit, and delete posts from here.
   (when (get-text-property (point) 'tumblesocks-post-data)
     ;; Get the reblog key.
     (let* ((post_id
-            (format "%d" (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data)))))
+            (format "%d" (plist-get
+                          (get-text-property (point) 'tumblesocks-post-data)
+                          :id)))
            (blog (tumblesocks-api-blog-posts
                   nil post_id nil "1" nil "true" nil "html"))
-           (post (elt (cdr (assq 'posts blog)) 0))
-           (reblog_key (cdr (assq 'reblog_key post))))
+           (post (car (plist-get blog :posts)))
+           (reblog_key (plist-get post :reblog_key)))
       (if (not like-p)
           (progn
             (tumblesocks-api-user-like post_id reblog_key)

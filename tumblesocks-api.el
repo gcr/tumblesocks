@@ -1,7 +1,6 @@
 ;; tumblesocks-api.el -- functions for talking with tumblr
 ;; Copyright (C) 2012 gcr
 
-(require 'assoc)
 (require 'oauth)
 (require 'json)
 (provide 'tumblesocks-api)
@@ -92,8 +91,9 @@ call `tumblesocks-api-reauthenticate' after this."
   (unless tumblesocks-blog (error "Please set the `tumblesocks-blog' variable. See https://github.com/gcr/tumblesocks for help getting Tumblesocks working."))
   (condition-case nil
       (message (concat "Hello, "
-                       (cdr (assq 'name
-                          (cdr (assq 'user (tumblesocks-api-user-info)))))
+                       (plist-get (plist-get (tumblesocks-api-user-info)
+                                             :user)
+                                  :name)
                        "! Tumblesocks is working properly."))
     (error
      (if (yes-or-no-p "Looks like something broke. Try again? (yes/no) ")
@@ -114,9 +114,17 @@ error if the error code is not in the 200 category."
   (with-current-buffer (url-retrieve-synchronously url)
     (tumblesocks-api-process-response)))
 
+(defun tumblesocks-plist-to-alist (plist)
+  (when plist
+    (let ((key (car plist))
+          (value (cadr plist))
+          (rest (cddr plist)))
+      (cons (cons (intern (substring (symbol-name key) 1)) value)
+            (tumblesocks-plist-to-alist rest)))))
+
 (defun tumblesocks-api-http-apikey-get (url params)
   "Post to an API-key-authenticated Tumblr API endpoint (url),
-using the given POST parameters (params, an alist).
+using the given POST parameters (params, a keyword plist).
 
 This function will return the response as JSON, or will signal an
 error if the error code is not in the 200 category."
@@ -126,7 +134,7 @@ error if the error code is not in the 200 category."
                                  '(lambda (x)
                                     (concat "&" (url-hexify-string (format "%s" (car x)))
                                             "=" (url-hexify-string (format "%s" (cdr x)))))
-                                 params "")))
+                                 (tumblesocks-plist-to-alist params) "")))
     (tumblesocks-api-process-response)))
 
 (defun tumblesocks-api-http-oauth-post (url params)
@@ -142,7 +150,7 @@ error if the error code is not in the 200 category."
        (mapcar '(lambda (x)
                   (cons (format "%s" (car x))
                         (format "%s" (cdr x))))
-               params))
+               (tumblesocks-plist-to-alist params)))
     (tumblesocks-api-process-response)))
 
 (defun tumblesocks-api-process-response ()
@@ -168,8 +176,11 @@ returning JSON or signaling an error for other requests."
       (search-forward-regexp "^$" nil t)
       ;; body
       (let* ((json-response (buffer-substring (1+ (point)) (point-max)))
-             (jsonobj (json-read-from-string json-response)))
-        (cdr (assq 'response jsonobj)))))))
+             (json-object-type 'plist)
+             (json-array-type 'list)
+             (json-false nil))
+        (plist-get (json-read-from-string json-response)
+                   :response))))))
 
 
 
@@ -185,47 +196,46 @@ returning JSON or signaling an error for other requests."
 (defun tumblesocks-api-user-dashboard (&optional limit offset type since_id reblog_info notes_info)
   "Gather information about the logged in user's dashboard"
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
-  (let ((args '()))
-    (when limit (aput 'args "limit" limit))
-    (when offset (aput 'args "offset" offset))
-    (when type (aput 'args "type" type))
-    (when since_id (aput 'args "since_id" since_id))
-    (when reblog_info (aput 'args "reblog_info" reblog_info))
-    (when notes_info (aput 'args "notes_info" notes_info))
+  (let ((args (append
+               (and limit `(:limit ,limit))
+               (and offset `(:offset ,offset))
+               (and type `(:offset ,type))
+               (and since_id `(:since_id ,since_id))
+               (and reblog_info `(:reblog_info ,reblog_info))
+               (and notes_info `(:notes_info ,notes_info)))))
     (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/dashboard") args)))
 
 (defun tumblesocks-api-user-likes (&optional limit offset)
   "Gather information about the logged in user's likes"
-  (let ((args '()))
-    (when limit (aput 'args "limit" limit))
-    (when offset (aput 'args "offset" offset))
+  (let ((args (append
+               (and limit `(:limit ,limit))
+               (and offset `(:offset ,offset)))))
     (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/likes") args)))
 
 (defun tumblesocks-api-user-following (&optional limit offset)
   "Gather information about which blogs are followed by the logged-in user"
-  (let ((args '()))
-    (when limit (aput 'args "limit" limit))
-    (when offset (aput 'args "offset" offset))
-    (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/following") args)))
+  (let ((args (append
+               (and limit `(:limit ,limit))
+               (and offset `(:offset ,offset)))))
+    (tumblesocks-api-http-oauth-post
+     (tumblesocks-api-url "/user/following") args)))
 
 (defun tumblesocks-api-user-follow (url)
   "Follow the given blog URL."
   (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/follow")
-                                   `(("url" . ,url))))
+                                   `(:url ,url)))
 (defun tumblesocks-api-user-unfollow (url)
   "Unfollow the given blog URL."
   (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/unfollow")
-                                   `(("url" . ,url))))
+                                   `(:url ,url)))
 (defun tumblesocks-api-user-like (id reblog_key)
   "Like a given post"
   (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/like")
-                                   `(("id" . ,id)
-                                     ("reblog_key" . ,reblog_key))))
+                                   `(:id ,id :reblog_key ,reblog_key)))
 (defun tumblesocks-api-user-unlike (id reblog_key)
   "Unlike a given post"
   (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/unlike")
-                                   `(("id" . ,id)
-                                     ("reblog_key" . ,reblog_key))))
+                                   `(:id ,id :reblog_key ,reblog_key)))
 
 (defun tumblesocks-api-blog-info ()
   "Gather information about the blog listed in
@@ -262,14 +272,14 @@ If given, retrieve just posts with the given attributes (args)
 See http://www.tumblr.com/docs/en/api/v2 for information about
 the returned JSON."
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
-  (let ((args '()))
-    (when id (aput 'args "id" id))
-    (when tag (aput 'args "tag" tag))
-    (when limit (aput 'args "limit" limit))
-    (when offset (aput 'args "offset" offset))
-    (when reblog_info (aput 'args "reblog_info" reblog_info))
-    (when notes_info (aput 'args "notes_info" notes_info))
-    (when filter (aput 'args "filter" filter))
+  (let ((args (append
+               (and id `(:id ,id))
+               (and tag `(:tag ,tag))
+               (and limit `(:limit ,limit))
+               (and offset `(:offset ,offset))
+               (and reblog_info `(:reblog_info ,reblog_info))
+               (and notes_info `(:notes_info ,notes_info))
+               (and filter `(:filter ,filter)))))
     (tumblesocks-api-http-apikey-get
      (tumblesocks-api-url "/blog/"
                           tumblesocks-blog
@@ -280,9 +290,9 @@ the returned JSON."
 (defun tumblesocks-api-blog-queued-posts (&optional offset filter)
   "Retrieve queued blog posts from `tumblesocks-blog'."
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
-  (let ((args '()))
-    (when offset (aput 'args "offset" offset))
-    (when filter (aput 'args "filter" filter))
+  (let ((args (append
+               (and offset `(:offset ,offset))
+               (and filter `(:filter ,filter)))))
     (tumblesocks-api-http-oauth-post
      (tumblesocks-api-url "/blog/" tumblesocks-blog "/posts/queue")
      args)))
@@ -291,8 +301,7 @@ the returned JSON."
   "Retrieve draft blog posts from `tumblesocks-blog'. You need
 write access to it!"
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
-  (let ((args '()))
-    (when filter (aput 'args "filter" filter))
+  (let ((args (and filter `(:filter ,filter))))
     (tumblesocks-api-http-oauth-post
      (tumblesocks-api-url "/blog/" tumblesocks-blog "/posts/draft")
      args)))
@@ -300,9 +309,9 @@ write access to it!"
 (defun tumblesocks-api-blog-submission-posts (&optional offset filter)
   "Retrieve submission blog posts from `tumblesocks-blog'."
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
-  (let ((args '()))
-    (when offset (aput 'args "offset" offset))
-    (when filter (aput 'args "filter" filter))
+  (let ((args (append
+               (and offset `(:offset ,offset))
+               (and filter `(:filter ,filter)))))
     (tumblesocks-api-http-oauth-post
      (tumblesocks-api-url "/blog/" tumblesocks-blog "/posts/submission")
      args)))
@@ -312,9 +321,9 @@ write access to it!"
 Args must be an alist of arguments to use.
 
 If you're making a text post, for example, args should be something like
-'((\"type\" . \"text\")
-  (\"title\" . \"How to use the Tumblr API\")
-  (\"body\" . \"...\"))"
+'(:type \"text\"
+  :title \"How to use the Tumblr API\"
+  :body \"...\")"
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (tumblesocks-api-http-oauth-post
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/post")
@@ -323,7 +332,7 @@ If you're making a text post, for example, args should be something like
 (defun tumblesocks-api-edit-post (id &optional args)
   "Edit the post with the given id. args should be as in `tumblesocks-new-post'."
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
-  (aput 'args "id" id)
+  (setq args (plist-put args :id id))
   (tumblesocks-api-http-oauth-post
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/post/edit")
    args))
@@ -331,9 +340,9 @@ If you're making a text post, for example, args should be something like
 (defun tumblesocks-api-reblog-post (id reblog_key &optional comment)
   "Reblog a post with the given id and reblog key."
   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
-  (let ((args `(("id" . ,id) ("reblog_key" . ,reblog_key))))
-    (when (and comment (not (string= comment "")))
-      (aput 'args "comment" comment))
+  (let ((args (append `(:id  ,id :reblog_key ,reblog_key)
+                      (and comment (not (string= comment ""))
+                           `(:comment ,comment)))))
     (tumblesocks-api-http-oauth-post
      (tumblesocks-api-url "/blog/" tumblesocks-blog "/post/reblog")
      args)))
@@ -342,14 +351,14 @@ If you're making a text post, for example, args should be something like
   "Delete the post with the given id. args should be as in `tumblesocks-new-post'."
   (tumblesocks-api-http-oauth-post
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/post/delete")
-   `(("id" . ,id))))
+   `(:id ,id)))
 
 (defun tumblesocks-api-tagged (tag &optional before limit filter)
-  (let ((args '()))
-    (aput 'args "tag" tag)
-    (when before (aput 'args "before" before))
-    (when limit (aput 'args "limit" limit))
-    (when filter (aput 'args "filter" filter))
+  (let ((args (append
+               `(:tag ,tag)
+               (and before `(:before ,before))
+               (and limit `(:limit ,limit))
+               (and filter `(:filter ,filter)))))
     (tumblesocks-api-http-apikey-get
      (tumblesocks-api-url "/tagged")
      args)))

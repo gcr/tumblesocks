@@ -1,6 +1,5 @@
 ;; tumblesocks-user.el -- higher-level functions for the tumblr api
 
-(require 'assoc)
 (require 'tumblesocks-api)
 (provide 'tumblesocks-user)
 
@@ -14,9 +13,10 @@
   "Unfollow a certain Tumblr blog on your list, with tab completion."
   (interactive (list (completing-read
                       "Blog URL to unfollow (TAB to complete): "
-                      (let ((bloglist (cdr (assq 'blogs
-                                                 (tumblesocks-api-user-following)))))
-                        (mapcar '(lambda (blog) (cdr (assq 'url blog)))
+                      (let ((bloglist (plist-get (tumblesocks-api-user-following)
+                                                 :blogs)))
+                        (mapcar '(lambda (blog)
+                                   (plist-get blog :url))
                                 bloglist))
                       nil t)))
   (tumblesocks-api-user-unfollow blog-url)
@@ -27,14 +27,16 @@
   (interactive "r\nsTitle: \nsTags (optional, comma separated): ")
   (when (and tags (string= tags "")) (setq tags nil))
   (when (string= title "") (error "You must provide a title."))
-  (let ((args '()))
-    (aput 'args "type" "text")
-    (aput 'args "format" "markdown")
-    (aput 'args "body" (buffer-substring begin end))
-    (aput 'args "title" title)
-    (when tags (aput 'args "tags" tags))
-    (let* ((blog-url (cdr (assq 'url (cdr (assq 'blog (tumblesocks-api-blog-info))))))
-           (new-post-id (format "%d" (cdr (assq 'id (tumblesocks-api-new-post args)))))
+  (let ((args (append
+               `(:type "text"
+                 :format "markdown"
+                 :body ,(buffer-substring begin end)
+                 :title ,title)
+               (and tags `(:tags ,tags)))))
+    (let* ((blog-url
+            (plist-get (plist-get (tumblesocks-api-blog-info) :blog) :url))
+           (new-post-id (format "%d" (plist-get (tumblesocks-api-new-post args)
+                                                :id)))
            (new-post-url
             (let* ((last-char (substring blog-url -1)))
               (cond ((string= last-char "/")
