@@ -1,5 +1,6 @@
 ;; tumblesocks-view.el -- Provide an interface to view tumblr blog posts.
 
+(require 'assoc)
 (require 'tumblesocks-api)
 (require 'tumblesocks-compose)
 (require 'shr)
@@ -7,7 +8,8 @@
 
 (defcustom tumblesocks-posts-per-page 20
   "How many posts per page to show"
-  :type 'number)
+  :type 'number
+  :group 'tumblesocks)
 
 (defvar tumblesocks-view-mode-map
   (let ((tumblesocks-view-mode-map (make-keymap)))
@@ -152,7 +154,9 @@
 (defvar tumblesocks-view-content-start nil)
 
 (define-derived-mode tumblesocks-view-mode fundamental-mode "Tumblr"
-  "Major mode for reading Tumblr blogs."
+  "Major mode for reading Tumblr blogs and posts.
+
+\\{tumblesocks-view-mode-map}"
   (make-local-variable 'tumblesocks-view-refresh-action)
   (make-local-variable 'tumblesocks-view-current-offset)
   (make-local-variable 'tumblesocks-view-content-start)
@@ -194,6 +198,9 @@
 (defun tumblesocks-view-previous-page-button-action (button)
   (tumblesocks-view-previous-page))
 (defun tumblesocks-view-previous-page ()
+  "Go back a page (into younger posts)
+
+We show `tumblesocks-posts-per-page' posts per page."
   (interactive)
   (setq tumblesocks-view-current-offset
         (max
@@ -206,6 +213,9 @@
 (defun tumblesocks-view-next-page-button-action (button)
   (tumblesocks-view-next-page))
 (defun tumblesocks-view-next-page ()
+  "Go forward a page (into older posts)
+
+We show `tumblesocks-posts-per-page' posts per page."
   (interactive)
   (setq tumblesocks-view-current-offset
          (+ tumblesocks-view-current-offset tumblesocks-posts-per-page))
@@ -216,9 +226,7 @@
 
 Blogdata should be the JSON result of a call to Tumblr's
 /blog/posts or /user/dashboard API. (We expect each post in
-blogdata to be filtered with the 'text' filter.)
-
-This function internally dispatches to other functions that are better suited to inserting each post."
+blogdata to be filtered with the 'text' filter.)"
   ;; See http://www.tumblr.com/docs/en/api/v2#posts for more
   ;; info about the post API.
   (setq tumblesocks-view-content-start (point-marker))
@@ -237,7 +245,10 @@ This function internally dispatches to other functions that are better suited to
       (put-text-property start (point) 'face font-lock-comment-face))))
 
 (defun tumblesocks-view-render-post (post &optional verbose-header)
-  "Render the post into the current buffer."
+  "Render the post into the current buffer.
+
+This function internally dispatches to other functions that are
+better suited to inserting each post."
   (let ((blog_name (cdr-safe (assq 'blog_name post)))
         (id (cdr-safe (assq 'id post)))
         (post_url (cdr-safe (assq 'post_url post)))
@@ -286,6 +297,7 @@ This function internally dispatches to other functions that are better suited to
                          post))))
 
 (defun tumblesocks-view-insert-header (&optional verbose)
+  "Draw the header for the current post, optionally being verbose."
   (let (begin end_bname)
     (setq begin (point))
     (insert blog_name ":")
@@ -433,8 +445,13 @@ This function internally dispatches to other functions that are better suited to
     (setq tumblesocks-view-refresh-action
           `(lambda () (tumblesocks-view-blog ,blogname))))) ; <-- CLOSURE HACK :p
 
+;;;###autoload
 (defun tumblesocks-view-dashboard ()
-  "View your dashboard"
+  "View the posts on your dashboard.
+
+You can browse around, edit, and delete posts from here.
+
+\\{tumblesocks-view-mode-map}"
   (interactive)
   (tumblesocks-view-prepare-buffer "Dashboard")
   (let ((dashboard-data (tumblesocks-api-user-dashboard
@@ -473,7 +490,7 @@ This function internally dispatches to other functions that are better suited to
           `(lambda () (tumblesocks-view-post ,post_id)))))
 
 (defun tumblesocks-view-render-notes (notes)
-  "Render the given notes into the given buffer"
+  "Render the given notes into the current buffer."
   (let ((start (point)))
     (insert "-- Notes:\n")
     (dolist (note (append notes nil))
@@ -517,7 +534,7 @@ This function internally dispatches to other functions that are better suited to
         (message "Unliked this post.")))))
 
 (defun tumblesocks-view-posts-tagged (tag)
-  "Search for posts with the given tag"
+  "Search for posts with the given tag."
   (interactive "sSearch for posts with tag: ")
   (tumblesocks-view-prepare-buffer
    (concat "Tag search: " tag))

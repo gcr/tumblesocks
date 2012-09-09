@@ -1,4 +1,6 @@
 ;; tumblesocks-user.el -- higher-level functions for the tumblr api
+
+(require 'assoc)
 (require 'tumblesocks-api)
 (provide 'tumblesocks-user)
 

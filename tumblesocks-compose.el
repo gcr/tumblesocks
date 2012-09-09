@@ -1,3 +1,5 @@
+
+(require 'assoc)
 (require 'tumblesocks-user)
 (require 'tumblesocks-api)
 (require 'htmlize)
@@ -9,14 +11,17 @@
 (defvar tumblesocks-compose-finish-action
   '(lambda () (call-interactively 'tumblesocks-text-post-from-buffer))
   "The action to run when finishing posting")
-(defvar tumblesocks-compose-continuation
-  nil "Optional action to run when finishing editing or posting")
+(defvar tumblesocks-compose-continuation nil
+  "Optional action to run when finishing editing or posting.
+
+tumblesocks-view uses this to refresh buffers, for example.")
 (defvar tumblesocks-compose-editing-id nil
   "If editing, the ID of the post that we are editing")
 (defvar tumblesocks-compose-editing-args nil
   "If editing, which args to use while we're editing")
 
 (defun tumblesocks-compose-finish ()
+  "Actually send the new/updated post to the server."
   (interactive)
   (funcall tumblesocks-compose-finish-action)
   (let ((cc tumblesocks-compose-continuation))
@@ -41,8 +46,11 @@
 
 
 
+;;;###autoload
 (defun tumblesocks-compose-new-post (&optional continuation)
-  "Open a new buffer containing a fresh post to begin authoring."
+  "Open a new buffer containing a fresh post to begin authoring.
+
+Once you're ready to submit your post, press C-c C-c"
   (interactive)
   (pop-to-buffer "*Tumblr: New post*")
   (erase-buffer)
@@ -52,7 +60,9 @@
 
 (defun tumblesocks-compose-new-from-region (begin end &optional continuation)
   "Open a new buffer containing a fresh post, but initially
-populate it with the contents of the region."
+populate it with the contents of the region.
+
+Once you're ready to submit your post, press C-c C-c"
   (interactive "r")
   (let ((initial-body (buffer-substring begin end)))
     (tumblesocks-compose-new-post)
@@ -88,7 +98,10 @@ post buffer"
 
 
 (defun tumblesocks-compose-edit-post (post-id &optional continuation)
-  "Open a new buffer containing a fresh post to begin authoring."
+  "Open a new buffer containing a fresh post to begin authoring.
+
+Once you're ready to finish editing, press C-c C-c. You will be
+prompted for a new title and new tags."
   (interactive "sPost ID: ")
   (let* ((returned-posts
           (cdr-safe (assq 'posts

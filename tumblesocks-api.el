@@ -1,21 +1,32 @@
 ;; tumblesocks-api.el -- functions for talking with tumblr
 ;; Copyright (C) 2012 gcr
 
+(require 'assoc)
 (require 'oauth)
 (require 'json)
 (provide 'tumblesocks-api)
 
 (defcustom tumblesocks-consumer-key
   "5xqkcJNRSGj3TokMQDJf3FzE8246DHvw8sNJWNn54fs2z0AhYr"
-  "Your tumblr app's consumer API key. This goes hand-in-hasd
-with `tumblesocks-secret-key'."
-  :type 'string)
+  "Our Tumblr OAuth consumer API key.
+
+This goes hand-in-hand with `tumblesocks-secret-key'.
+
+If you need to register your own app, do that at
+http://www.tumblr.com/oauth/apps"
+  :type 'string
+  :group 'tumblesocks)
 
 (defcustom tumblesocks-secret-key
   "juLG1T866ZG964ybgGCu1EntFMo5eQuHth1SKCqL2mdMzNIL1Q"
-  "Your tumbler app's secret key. Works in tandem with
-`tumblesocks-consumer-key'."
-  :type 'string)
+  "Our Tumblr OAuth consumer secret key.
+
+This goes hand-in-hand with `tumblesocks-consumer-key'.
+
+If you need to register your own app, do that at
+http://www.tumblr.com/oauth/apps"
+  :type 'string
+  :group 'tumblesocks)
 
 (defcustom tumblesocks-blog nil
   "Your blog name, like xxx.tumblr.com.
@@ -23,7 +34,8 @@ with `tumblesocks-secret-key'."
 This variable affects many functions that depend on blogs. For
 example, `tumblesocks-api-blog-posts' will consult this variable
 to pick which block to list posts for, so if you want to temporarily ask for a different blog, rebind this."
-  :type 'string)
+  :type 'string
+  :group 'tumblesocks)
 
 (defvar tumblesocks-token nil)
 
@@ -77,7 +89,7 @@ call `tumblesocks-api-reauthenticate' after this."
 
 (defun tumblesocks-api-test-auth ()
   (interactive)
-  (unless tumblesocks-blog (error "Please set `tumblesocks-blog'"))
+  (unless tumblesocks-blog (error "Please set the `tumblesocks-blog' variable. See https://github.com/gcr/tumblesocks for help getting Tumblesocks working."))
   (condition-case nil
       (message (concat "Hello, "
                        (cdr (assq 'name
