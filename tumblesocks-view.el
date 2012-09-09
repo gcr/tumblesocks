@@ -153,7 +153,7 @@
            (blog (tumblesocks-api-blog-posts
                   nil post_id nil "1" nil "true" nil "html"))
            (post (car (plist-get blog :posts)))
-           (reblog_key (plist-get blog :reblog_key)))
+           (reblog_key (plist-get post :reblog_key)))
       (tumblesocks-api-reblog-post
        post_id reblog_key
        (read-string "(Optional) comments to add: "))
