@@ -27,6 +27,7 @@
   (when (string= title "") (error "You must provide a title."))
   (let ((args '()))
     (aput 'args "type" "text")
+    (aput 'args "format" "markdown")
     (aput 'args "body" (buffer-substring begin end))
     (aput 'args "title" title)
     (when tags (aput 'args "tags" tags))

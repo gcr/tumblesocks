@@ -69,8 +69,7 @@
 (defun tumblesocks-view-refresh ()
   (interactive)
   (when tumblesocks-view-refresh-action
-    (funcall tumblesocks-view-refresh-action)
-    (message "View refreshed.")))
+    (funcall tumblesocks-view-refresh-action)))
 
 (defun tumblesocks-view-post-at-point ()
   (interactive)
