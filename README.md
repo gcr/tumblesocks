@@ -34,10 +34,21 @@ Managing your posts:
 * **d: Delete** the post under the cursor. (This only works if you made that post.)
 * **e: Edit** the post under the cursor. (This only works if you made that post.)
 
-How to connect Tumblesocks to your tumblr account
-=================================================
+Installing
+----------
 
-Dependencies: First, you must install the following:
+If you have Emacs 24, you can install Tumblesocks from Marmalade the
+easy way by inserting the following into your `emacs.d`:
+
+    (setq package-archives
+      '(("gnu" . "http://elpa.gnu.org/packages/")
+        ("marmalade" . "http://marmalade-repo.org/packages/")))
+
+Then, run `M-x package-install tumblesocks`, kick back, and skip to
+the next section.
+
+If you instead want to add Tumblesocks to your Emacs manually, you
+must have these dependencies:
 
 * Emacs 24
 * [The Emacs OAuth library](https://github.com/psanford/emacs-oauth)
@@ -45,6 +56,11 @@ Dependencies: First, you must install the following:
 * `markdown-mode`, available [here](http://jblevins.org/projects/markdown-mode/).
 * `json.el`, which is part of Emacs 24.
 
+Add all of that to your `load-path`, and make sure `(require
+'tumblesocks)` doesn't complain.
+
+How to connect Tumblesocks to your tumblr account
+-------------------------------------------------
 The first time you use Tumblesocks, you mist connect Emacs to your
 tumblr account. This process is a bit convoluted, but you only have to
 do it once.
