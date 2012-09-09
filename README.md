@@ -37,11 +37,13 @@ Managing your posts:
 How to connect Tumblesocks to your tumblr account
 =================================================
 
-Dependencies: First, you must install
+Dependencies: First, you must install the following:
 
+* Emacs 24
 * [The Emacs OAuth library](https://github.com/psanford/emacs-oauth)
 * `htmlize.el`, which is available [here](http://fly.srk.fer.hr/~hniksic/emacs/htmlize.el.cgi).
 * `markdown-mode`, available [here](http://jblevins.org/projects/markdown-mode/).
+* `json.el`, which is part of Emacs 24.
 
 The first time you use Tumblesocks, you mist connect Emacs to your
 tumblr account. This process is a bit convoluted, but you only have to

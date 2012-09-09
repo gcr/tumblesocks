@@ -2,6 +2,7 @@
 ;; Copyright (C) 2012 gcr
 
 (require 'oauth)
+(require 'json)
 (provide 'tumblesocks-api)
 
 (defcustom tumblesocks-consumer-key
