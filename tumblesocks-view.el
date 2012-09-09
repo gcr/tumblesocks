@@ -16,6 +16,7 @@
     (define-key tumblesocks-view-mode-map "c" 'tumblesocks-view-compose-new-post)
     (define-key tumblesocks-view-mode-map "g" 'tumblesocks-view-refresh)
     (define-key tumblesocks-view-mode-map "s" 'tumblesocks-view-posts-tagged)
+    (define-key tumblesocks-view-mode-map "r" 'tumblesocks-view-reblog-post-at-point)
     (define-key tumblesocks-view-mode-map "p" 'tumblesocks-view-previous-post)
     (define-key tumblesocks-view-mode-map (kbd "RET") 'tumblesocks-view-post-at-point)
     (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog)
@@ -125,6 +126,25 @@
         (let ((pos (point)))
           (tumblesocks-view-refresh)
           (goto-char pos))))))
+
+(defun tumblesocks-view-reblog-post-at-point ()
+  "Reblog the post at point, if there is one."
+  (interactive)
+  (when (get-text-property (point) 'tumblesocks-post-data)
+    ;; Get the reblog key.
+    (let* ((post_id
+            (format "%d" (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data)))))
+           ;; we need to do another API fetch because
+           ;; tumblesocks-post-data doesn't have reblog keys, by design
+           (blog (tumblesocks-api-blog-posts
+                  nil post_id nil "1" nil "true" nil "html"))
+           (post (elt (cdr (assq 'posts blog)) 0))
+           (reblog_key (cdr (assq 'reblog_key post))))
+        (tumblesocks-api-reblog-post
+         post_id reblog_key
+         (read-string "(Optional) comments to add: "))
+        (message "Reblogged.")
+        (tumblesocks-view-refresh))))
 
 
 
@@ -319,6 +339,8 @@ This function internally dispatches to other functions that are better suited to
                                  (cdr (assq 'caption photdata)))))
                       photos)))))
     (tumblesocks-view-insert-parsed-html-fragment photo-html-frag)
+    (when caption
+      (tumblesocks-view-insert-html-fragment caption))
     (insert "\n")))
 
 (defun tumblesocks-view-insert-quote ()
@@ -507,13 +529,3 @@ This function internally dispatches to other functions that are better suited to
   (tumblesocks-view-finishrender)
   (setq tumblesocks-view-refresh-action
         `(lambda () (tumblesocks-view-posts-tagged ,tag))))
-
-
-;; view-blog-at-point should be just view-blog, which looks at point
-;; for the blog to view.
-
-;; reblog posts from tumblesocks-view (how do notes work?)
-     ;; only fetch reblog info when reblogging
-
-;; documentation
-;; better authentication

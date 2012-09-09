@@ -5,11 +5,13 @@
 (provide 'tumblesocks-api)
 
 (defcustom tumblesocks-consumer-key nil
-  "Your tumblr app's consumer API key"
+  "Your tumblr app's consumer API key. This goes hand-in-hasd
+with `tumblesocks-secret-key'."
   :type 'string)
 
 (defcustom tumblesocks-secret-key nil
-  "Your tumbler app's secret key"
+  "Your tumbler app's secret key. Works in tandem with
+`tumblesocks-consumer-key'."
   :type 'string)
 
 (defcustom tumblesocks-blog nil
@@ -17,15 +19,26 @@
 
 This variable affects many functions that depend on blogs. For
 example, `tumblesocks-api-blog-posts' will consult this variable
-to pick which block to list posts for, so be sure to rebind it.
-Changing this variable is like changing the context of which blog
-you're talking about."
+to pick which block to list posts for, so if you want to temporarily ask for a different blog, rebind this."
   :type 'string)
 
 (defvar tumblesocks-token nil)
 
+(defun tumblesocks-api-forget-authentication ()
+  "Forget our authentication and delete the token file. You must
+call `tumblesocks-api-reauthenticate' after this."
+  (interactive)
+  (setq tumblesocks-token nil)
+  (let ((tumblesocks-token-file (concat (file-name-as-directory user-emacs-directory)
+                                        "tumblr-oauth-token")))
+    (when (file-exists-p tumblesocks-token-file)
+      (delete-file tumblesocks-token-file))))
+
 (defun tumblesocks-api-reauthenticate ()
   "Read our tumblr token from the tumblr token file, or generate a new one."
+  (when (or (not tumblesocks-secret-key)
+            (not tumblesocks-consumer-key))
+    (error "You MUST set both `tumblesocks-secret-key' and `tumblesocks-consumer-key' to use tumblesocks."))
   (let ((tumblesocks-token-file (concat (file-name-as-directory user-emacs-directory)
                                         "tumblr-oauth-token")))
     (when (file-exists-p tumblesocks-token-file)
@@ -285,13 +298,15 @@ If you're making a text post, for example, args should be something like
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/post/edit")
    args))
 
-(defun tumblesocks-api-reblog-post (id reblog_key)
+(defun tumblesocks-api-reblog-post (id reblog_key &optional comment)
   "Reblog a post with the given id and reblog key."
   (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
-  (tumblesocks-api-http-oauth-post
-   (tumblesocks-api-url "/blog/" tumblesocks-blog "/post/reblog")
-   `(("id" . ,id)
-     ("reblog_key" . ,reblog_key))))
+  (let ((args `(("id" . ,id) ("reblog_key" . ,reblog_key))))
+    (when (and comment (not (string= comment "")))
+      (aput 'args "comment" comment))
+    (tumblesocks-api-http-oauth-post
+     (tumblesocks-api-url "/blog/" tumblesocks-blog "/post/reblog")
+     args)))
 
 (defun tumblesocks-api-delete-post (id)
   "Delete the post with the given id. args should be as in `tumblesocks-new-post'."
