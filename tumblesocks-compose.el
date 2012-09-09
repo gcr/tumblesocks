@@ -9,6 +9,8 @@
 (defvar tumblesocks-compose-finish-action
   '(lambda () (call-interactively 'tumblesocks-text-post-from-buffer))
   "The action to run when finishing posting")
+(defvar tumblesocks-compose-continuation
+  nil "Optional action to run when finishing editing or posting")
 (defvar tumblesocks-compose-editing-id nil
   "If editing, the ID of the post that we are editing")
 (defvar tumblesocks-compose-editing-args nil
@@ -17,7 +19,10 @@
 (defun tumblesocks-compose-finish ()
   (interactive)
   (funcall tumblesocks-compose-finish-action)
-  (quit-window))
+  (let ((cc tumblesocks-compose-continuation))
+    (quit-window)
+    (when cc
+      (funcall cc))))
 
 (defvar tumblesocks-compose-mode-map
   (let ((tumblesocks-compose-mode-map (make-keymap)))
@@ -31,19 +36,21 @@
   (setq tumblesocks-compose-finish-action
           '(lambda () (call-interactively 'tumblesocks-text-post-from-buffer)))
   (make-local-variable 'tumblesocks-compose-editing-args)
-  (make-local-variable 'tumblesocks-compose-editing-id))
+  (make-local-variable 'tumblesocks-compose-editing-id)
+  (make-local-variable 'tumblesocks-compose-continuation))
 
 
 
-(defun tumblesocks-compose-new-post ()
+(defun tumblesocks-compose-new-post (&optional continuation)
   "Open a new buffer containing a fresh post to begin authoring."
   (interactive)
   (pop-to-buffer "*Tumblr: New post*")
   (erase-buffer)
   (tumblesocks-compose-mode)
-  (setq header-line-format "New tumblr post"))
+  (setq header-line-format "New tumblr post")
+  (setq tumblesocks-compose-continuation continuation))
 
-(defun tumblesocks-compose-new-from-region (begin end)
+(defun tumblesocks-compose-new-from-region (begin end &optional continuation)
   "Open a new buffer containing a fresh post, but initially
 populate it with the contents of the region."
   (interactive "r")
@@ -51,9 +58,10 @@ populate it with the contents of the region."
     (tumblesocks-compose-new-post)
     (insert "\n \n")
     (insert initial-body)
-    (goto-char (point-min))))
+    (goto-char (point-min)))
+  (setq tumblesocks-compose-continuation continuation))
 
-(defun tumblesocks-compose-new-from-highlighted-region (begin end)
+(defun tumblesocks-compose-new-from-highlighted-region (begin end &optional continuation)
   "Open a new buffer containing a fresh post, but initially
 populate it with the contents of the region. The region is
 syntax-highlighted using Emacs' htmlize library."
@@ -63,7 +71,8 @@ syntax-highlighted using Emacs' htmlize library."
     (tumblesocks-compose-new-post)
     (insert "\n \n")
     (insert initial-body)
-    (goto-char (point-min))))
+    (goto-char (point-min)))
+  (setq tumblesocks-compose-continuation continuation))
 
 (defun tumblesocks-compose-insert-highlighted-region (beg end)
   "Add new syntax-highlighted text from the region into the tumblr
@@ -78,7 +87,7 @@ post buffer"
 
 
 
-(defun tumblesocks-compose-edit-post (post-id)
+(defun tumblesocks-compose-edit-post (post-id &optional continuation)
   "Open a new buffer containing a fresh post to begin authoring."
   (interactive "sPost ID: ")
   (let* ((returned-posts
@@ -107,13 +116,14 @@ post buffer"
           tumblesocks-compose-editing-args)
     (setq tumblesocks-compose-finish-action 'tumblesocks-compose-edit-finish)
     (insert body)
-    (goto-char (point-min))))
+    (goto-char (point-min))
+    (setq tumblesocks-compose-continuation continuation)))
 
 (defun tumblesocks-compose-edit-finish ()
   "Finish editing the given post"
   ;; Optionally prompt for title
-  (let ((new-title (read-string "Title: " (cdr (assq 'title tumblesocks-compose-editing-args))))
-        (new-tags (read-string "Tags: " (cdr (assq 'tags tumblesocks-compose-editing-args)))))
+  (let ((new-title (read-string "New title: " (cdr (assq 'title tumblesocks-compose-editing-args))))
+        (new-tags (read-string "New tags: " (cdr (assq 'tags tumblesocks-compose-editing-args)))))
     ;; Set tags
     (when (and new-tags (string= new-tags "")) (setq new-tags nil))
     (when (string= new-title "") (error "You must provide a title."))

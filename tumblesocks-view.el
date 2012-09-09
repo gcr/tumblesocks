@@ -13,28 +13,41 @@
   (let ((tumblesocks-view-mode-map (make-keymap)))
     (define-key tumblesocks-view-mode-map "q" 'quit-window)
     (define-key tumblesocks-view-mode-map "n" 'tumblesocks-view-next-post)
-    (define-key tumblesocks-view-mode-map "c" 'tumblesocks-compose-new-post)
+    (define-key tumblesocks-view-mode-map "c" 'tumblesocks-view-compose-new-post)
     (define-key tumblesocks-view-mode-map "g" 'tumblesocks-view-refresh)
+    (define-key tumblesocks-view-mode-map "s" 'tumblesocks-view-posts-tagged)
     (define-key tumblesocks-view-mode-map "p" 'tumblesocks-view-previous-post)
     (define-key tumblesocks-view-mode-map (kbd "RET") 'tumblesocks-view-post-at-point)
-    (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog-at-point)
+    (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog)
     (define-key tumblesocks-view-mode-map "d" 'tumblesocks-view-delete-post-at-point)
     (define-key tumblesocks-view-mode-map "e" 'tumblesocks-view-edit-post-at-point)
     (define-key tumblesocks-view-mode-map "f" 'tumblesocks-view-follow-blog-at-point)
     (define-key tumblesocks-view-mode-map "l" 'tumblesocks-view-like-post-at-point)
+    (define-key tumblesocks-view-mode-map "o" 'tumblesocks-view-post-url-at-point)
+    (define-key tumblesocks-view-mode-map "y" 'tumblesocks-view-yank-post-url-at-point)
     tumblesocks-view-mode-map))
+
+(defun tumblesocks-view-compose-new-post ()
+  "Like `tumblesocks-compose-new-post', but refresh the view when we're done."
+  (interactive)
+  (tumblesocks-compose-new-post 'tumblesocks-view-refresh))
 
 (defun tumblesocks-view-previous-post ()
   (interactive)
   (cond
    ((get-text-property (point) 'tumblesocks-post-data)
     (goto-char (previous-single-property-change (point) 'tumblesocks-post-data
-                                            nil (point-min))))
-   ((eq 'forward (button-get (button-at (point)) 'tumblesocks-direction))
+                                                nil
+                                                tumblesocks-view-content-start)))
+   ((and (button-at (point))
+         (eq 'forward (button-get (button-at (point)) 'tumblesocks-direction)))
     (goto-char (previous-single-property-change (point) 'tumblesocks-post-data
-                                            nil (point-min))))
-   ((eq 'back (button-get (button-at (point)) 'tumblesocks-direction))
-    (button-activate (button-at (point))))))
+                                                nil
+                                                tumblesocks-view-content-start)))
+   ((and (button-at (point))
+         (eq 'back (button-get (button-at (point)) 'tumblesocks-direction)))
+    (button-activate (button-at (point))))
+   (t (previous-line))))
 
 (defun tumblesocks-view-next-post ()
   (interactive)
@@ -42,11 +55,14 @@
    ((get-text-property (point) 'tumblesocks-post-data)
     (goto-char (next-single-property-change (point) 'tumblesocks-post-data
                                             nil (- (point-max) 1))))
-   ((eq 'forward (button-get (button-at (point)) 'tumblesocks-direction))
+   ((and (button-at (point))
+         (eq 'forward (button-get (button-at (point)) 'tumblesocks-direction)))
     (button-activate (button-at (point))))
-   ((eq 'back (button-get (button-at (point)) 'tumblesocks-direction))
+   ((and (button-at (point))
+         (eq 'back (button-get (button-at (point)) 'tumblesocks-direction)))
     (goto-char (next-single-property-change (point) 'tumblesocks-post-data
-                                            nil (- (point-max) 1))))))
+                                            nil (- (point-max) 1))))
+   (t (next-line))))
 
 (defvar tumblesocks-view-refresh-action nil)
 
@@ -62,11 +78,19 @@
     (tumblesocks-view-post
      (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))))
 
-(defun tumblesocks-view-blog-at-point ()
+(defun tumblesocks-view-post-url-at-point ()
   (interactive)
   (when (get-text-property (point) 'tumblesocks-post-data)
-    (let ((blog-name (cdr (assq 'blog_name (get-text-property (point) 'tumblesocks-post-data)))))
-      (tumblesocks-view-blog (concat blog-name ".tumblr.com")))))
+    (let ((post_url (cdr (assq 'post_url (get-text-property (point) 'tumblesocks-post-data)))))
+      (browse-url post_url)
+      (message (concat "Opening " post_url " in your browser...")))))
+
+(defun tumblesocks-view-yank-post-url-at-point ()
+  (interactive)
+  (when (get-text-property (point) 'tumblesocks-post-data)
+    (let ((post_url (cdr (assq 'post_url (get-text-property (point) 'tumblesocks-post-data)))))
+      (kill-new post_url)
+      (message (concat "Yanked " post_url)))))
 
 (defun tumblesocks-view-follow-blog-at-point (follow-p)
   "Follow the blog at point. With prefix arg, UNfollow the blog at point."
@@ -88,22 +112,32 @@
   (when (yes-or-no-p "Really try to delete this post? ")
     (tumblesocks-api-delete-post
      (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))
-    (message "Post deleted.")))
+    (message "Post deleted.")
+    (let ((pos (point)))
+      (tumblesocks-view-refresh)
+      (goto-char pos))))
 
 (defun tumblesocks-view-edit-post-at-point ()
   (interactive)
   (when (yes-or-no-p "Really try to edit this post? ")
     (tumblesocks-compose-edit-post
-     (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data))))))
+     (cdr (assq 'id (get-text-property (point) 'tumblesocks-post-data)))
+     '(lambda ()
+        (let ((pos (point)))
+          (message "MARK")
+          (tumblesocks-view-refresh)
+          (goto-char pos))))))
 
 
 
 (defvar tumblesocks-view-current-offset 0)
+(defvar tumblesocks-view-content-start nil)
 
 (define-derived-mode tumblesocks-view-mode fundamental-mode "Tumblr"
   "Major mode for reading Tumblr blogs."
   (make-local-variable 'tumblesocks-view-refresh-action)
   (make-local-variable 'tumblesocks-view-current-offset)
+  (make-local-variable 'tumblesocks-view-content-start)
   ;;(visual-line-mode t) ;shr.el takes care of this...
 )
 
@@ -128,7 +162,12 @@
   (insert-button "[<< Previous Page...]"
                  'action 'tumblesocks-view-previous-page-button-action
                  'tumblesocks-direction 'back)
-  (insert "\n"))
+  (let ((start (point)))
+    (insert (format "\nPage %d:"
+                    (1+ (floor (/ tumblesocks-view-current-offset
+                                  tumblesocks-posts-per-page)))))
+    (put-text-property start (point) 'face font-lock-comment-face))
+  (insert "\n\n"))
 (defun tumblesocks-view-insert-nextpage-button ()
   (insert-button "[Next Page... >>]"
                  'action 'tumblesocks-view-next-page-button-action
@@ -164,6 +203,7 @@ blogdata to be filtered with the 'text' filter.)
 This function internally dispatches to other functions that are better suited to inserting each post."
   ;; See http://www.tumblr.com/docs/en/api/v2#posts for more
   ;; info about the post API.
+  (setq tumblesocks-view-content-start (point-marker))
   (when (> tumblesocks-view-current-offset 0)
     (tumblesocks-view-insert-prevpage-button))
   (if (> (length blogdata) 0)
@@ -284,12 +324,26 @@ This function internally dispatches to other functions that are better suited to
     (insert "\n")))
 
 (defun tumblesocks-view-insert-quote ()
-  (tumblesocks-view-insert-html-fragment source t))
+  (tumblesocks-view-insert-html-fragment text t)
+  (insert "\n")
+  (tumblesocks-view-insert-html-fragment source t)
+  (insert "\n"))
+
+(defun tumblesocks-view-insert-answer ()
+  (insert asking_name " asks: \n  ")
+  (let ((start (point))
+        (shr-indentation 4))
+    (tumblesocks-view-insert-html-fragment question t)
+    (put-text-property start (point) 'face font-lock-comment-face))
+  (tumblesocks-view-insert-html-fragment answer))
+
+;shonelikethesun
 
 (defun tumblesocks-view-insert-link ()
-  (tumblesocks-view-insert-parsed-html-fragment
-   `(a ((href . ,url))
-       ,(if (> (length description) 0) description url))))
+  (tumblesocks-view-insert-parsed-html-fragment `(a ((href . ,url)) ,url) t)
+  (insert "\n")
+  (tumblesocks-view-insert-html-fragment description)
+  (insert "\n"))
 
 (defun tumblesocks-view-insert-chat ()
   (dolist (message (append dialogue nil))
@@ -320,17 +374,40 @@ This function internally dispatches to other functions that are better suited to
   "Finish creating the blog buffer, ready to present to the user"
   (set-buffer-modified-p nil)
   (setq buffer-read-only t)
-  (goto-char (point-min)))
+  (goto-char (or tumblesocks-view-content-start (point-min))))
 
 (defun tumblesocks-view-blog (blogname)
   "View the given blog (URL or name)"
-  (interactive (list (read-string "Blog to view: " tumblesocks-blog)))
+  (interactive
+   (list (read-string
+          "Blog to view: "
+          (if (get-text-property (point) 'tumblesocks-post-data)
+              (concat
+               (cdr (assq 'blog_name
+                          (get-text-property (point) 'tumblesocks-post-data)))
+               ".tumblr.com")
+            ""))))
   (let* ((tumblesocks-blog blogname) ; dynamic binding the blog!
+         (blog-info (cdr (assq 'blog (tumblesocks-api-blog-info))))
          (returned-data (tumblesocks-api-blog-posts
                          nil nil nil tumblesocks-posts-per-page
                          tumblesocks-view-current-offset nil nil "html")))
     (tumblesocks-view-prepare-buffer
-     (cdr (assq 'title (cdr (assq 'blog (tumblesocks-api-blog-info))))))
+     (cdr (assq 'title blog-info)))
+    ;; Draw blog info
+    (let ((begin (point)))
+      (insert (cdr (assq 'title blog-info)) " - " (cdr (assq 'url blog-info)))
+      (center-line)
+      (insert (format "\n%d post%s"
+                      (cdr (assq 'posts blog-info))
+                      (if (= 1 (cdr (assq 'posts blog-info))) "" "s")))
+      (when (cdr (assq 'likes blog-info))
+        (insert (format ", %d like%s"
+                        (cdr (assq 'likes blog-info))
+                        (if (= 1 (cdr (assq 'likes blog-info))) "" "s"))))
+      (center-line)
+      (insert "\n\n")
+      (put-text-property begin (point) 'face font-lock-comment-face))
     (tumblesocks-view-render-blogdata
      (cdr (assq 'posts returned-data))
      (cdr (assq 'total_posts returned-data)))
@@ -345,6 +422,11 @@ This function internally dispatches to other functions that are better suited to
   (let ((dashboard-data (tumblesocks-api-user-dashboard
                          tumblesocks-posts-per-page
                          tumblesocks-view-current-offset nil nil nil nil)))
+    (let ((begin (point)))
+      (insert "Dashboard")
+      (center-line)
+      (insert "\n\n")
+      (put-text-property begin (point) 'face font-lock-comment-face))
     (tumblesocks-view-render-blogdata
      (cdr (assq 'posts dashboard-data))
      99999) ; allow them to browse practically infinite posts
@@ -355,6 +437,8 @@ This function internally dispatches to other functions that are better suited to
 (defun tumblesocks-view-post (post_id)
   "View a post in its own dedicated buffer, with notes"
   (interactive "sPost ID: ")
+  (unless (stringp post_id)
+    (setq post_id (format "%d" post_id)))
   (let* ((blog (tumblesocks-api-blog-posts
                 nil post_id nil "1" nil nil "true" "html"))
          (post (elt (cdr (assq 'posts blog)) 0))
@@ -363,6 +447,7 @@ This function internally dispatches to other functions that are better suited to
      (format "Viewing post %s: %s"
              (cdr (assq 'blog_name post))
              post_id))
+    (setq tumblesocks-view-content-start (point-marker))
     (tumblesocks-view-render-post post t)
     (tumblesocks-view-render-notes notes)
     (tumblesocks-view-finishrender)
@@ -420,7 +505,10 @@ This function internally dispatches to other functions that are better suited to
   (setq tumblesocks-view-refresh-action
         `(lambda () (tumblesocks-view-posts-tagged ,tag))))
 
-;; tumblesocks-view should have pagination
+
+;; view-blog-at-point should be just view-blog, which looks at point
+;; for the blog to view.
+
 ;; reblog posts from tumblesocks-view (how do notes work?)
      ;; only fetch reblog info when reblogging
 
