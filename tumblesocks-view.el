@@ -395,8 +395,9 @@ This function internally dispatches to other functions that are better suited to
      (cdr (assq 'title blog-info)))
     ;; Draw blog info
     (let ((begin (point)))
+      (tumblesocks-view-insert-parsed-html-fragment
+       `(img ((src . ,(tumblesocks-api-avatar-url)))) t)
       (insert (cdr (assq 'title blog-info)) " - " (cdr (assq 'url blog-info)))
-      (center-line)
       (insert (format "\n%d post%s"
                       (cdr (assq 'posts blog-info))
                       (if (= 1 (cdr (assq 'posts blog-info))) "" "s")))
@@ -404,7 +405,6 @@ This function internally dispatches to other functions that are better suited to
         (insert (format ", %d like%s"
                         (cdr (assq 'likes blog-info))
                         (if (= 1 (cdr (assq 'likes blog-info))) "" "s"))))
-      (center-line)
       (insert "\n\n")
       (put-text-property begin (point) 'face font-lock-comment-face))
     (tumblesocks-view-render-blogdata

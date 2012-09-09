@@ -131,6 +131,11 @@ returning JSON or signaling an error for other requests."
 
 
 
+(defun tumblesocks-api-avatar-url (&optional size)
+  (tumblesocks-api-url
+   "/blog/" tumblesocks-blog "/avatar/"
+   (format "%d" (or size 128))))
+
 (defun tumblesocks-api-user-info ()
   "Gather information about the logged in user"
   (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/info") '()))
