@@ -12,12 +12,12 @@
 (defvar tumblesocks-view-mode-map
   (let ((tumblesocks-view-mode-map (make-keymap)))
     (define-key tumblesocks-view-mode-map "q" 'quit-window)
+    (define-key tumblesocks-view-mode-map "p" 'tumblesocks-view-previous-post)
     (define-key tumblesocks-view-mode-map "n" 'tumblesocks-view-next-post)
     (define-key tumblesocks-view-mode-map "c" 'tumblesocks-view-compose-new-post)
     (define-key tumblesocks-view-mode-map "g" 'tumblesocks-view-refresh)
     (define-key tumblesocks-view-mode-map "s" 'tumblesocks-view-posts-tagged)
     (define-key tumblesocks-view-mode-map "r" 'tumblesocks-view-reblog-post-at-point)
-    (define-key tumblesocks-view-mode-map "p" 'tumblesocks-view-previous-post)
     (define-key tumblesocks-view-mode-map (kbd "RET") 'tumblesocks-view-post-at-point)
     (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog)
     (define-key tumblesocks-view-mode-map "d" 'tumblesocks-view-delete-post-at-point)
@@ -356,8 +356,6 @@ This function internally dispatches to other functions that are better suited to
     (tumblesocks-view-insert-html-fragment question t)
     (put-text-property start (point) 'face font-lock-comment-face))
   (tumblesocks-view-insert-html-fragment answer))
-
-;shonelikethesun
 
 (defun tumblesocks-view-insert-link ()
   (tumblesocks-view-insert-parsed-html-fragment `(a ((href . ,url)) ,url) t)

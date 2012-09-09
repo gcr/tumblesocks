@@ -76,6 +76,7 @@ call `tumblesocks-api-reauthenticate' after this."
 
 (defun tumblesocks-api-test-auth ()
   (interactive)
+  (unless tumblesocks-blog (error "Please set `tumblesocks-blog'"))
   (condition-case nil
       (message (concat "Hello, "
                        (cdr (assq 'name

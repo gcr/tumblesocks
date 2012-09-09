@@ -80,7 +80,7 @@ post buffer"
   (interactive "r")
   (deactivate-mark)
   (let ((htmlstring (htmlize-region-for-paste beg end)))
-    (pop-to-buffer "*Tumblr: New post")
+    (pop-to-buffer "*Tumblr: New post*")
     (goto-char (point-max))
     (insert "\n\n")
     (insert htmlstring)))
