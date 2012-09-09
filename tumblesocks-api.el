@@ -4,12 +4,14 @@
 (require 'oauth)
 (provide 'tumblesocks-api)
 
-(defcustom tumblesocks-consumer-key nil
+(defcustom tumblesocks-consumer-key
+  "5xqkcJNRSGj3TokMQDJf3FzE8246DHvw8sNJWNn54fs2z0AhYr"
   "Your tumblr app's consumer API key. This goes hand-in-hasd
 with `tumblesocks-secret-key'."
   :type 'string)
 
-(defcustom tumblesocks-secret-key nil
+(defcustom tumblesocks-secret-key
+  "juLG1T866ZG964ybgGCu1EntFMo5eQuHth1SKCqL2mdMzNIL1Q"
   "Your tumbler app's secret key. Works in tandem with
 `tumblesocks-consumer-key'."
   :type 'string)
@@ -72,6 +74,19 @@ call `tumblesocks-api-reauthenticate' after this."
         (save-buffer)
         (kill-this-buffer)))))
 
+(defun tumblesocks-api-test-auth ()
+  (interactive)
+  (condition-case nil
+      (message (concat "Hello, "
+                       (cdr (assq 'name
+                          (cdr (assq 'user (tumblesocks-api-user-info)))))
+                       "! Tumblesocks is working properly."))
+    (error
+     (if (yes-or-no-p "Looks like something broke. Try again? (yes/no) ")
+         (progn
+           (tumblesocks-api-forget-authentication)
+           (tumblesocks-api-test-auth))
+       (message "Please see http://github.com/gcr/tumblesocks for help.")))))
 
 (defun tumblesocks-api-url (&rest args)
   (apply 'concat "https://api.tumblr.com/v2" args))
@@ -155,6 +170,7 @@ returning JSON or signaling an error for other requests."
 
 (defun tumblesocks-api-user-dashboard (&optional limit offset type since_id reblog_info notes_info)
   "Gather information about the logged in user's dashboard"
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (let ((args '()))
     (when limit (aput 'args "limit" limit))
     (when offset (aput 'args "offset" offset))
@@ -200,7 +216,7 @@ returning JSON or signaling an error for other requests."
 (defun tumblesocks-api-blog-info ()
   "Gather information about the blog listed in
 `tumblesocks-blog'."
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (tumblesocks-api-http-apikey-get
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/info")
    '()))
@@ -208,7 +224,7 @@ returning JSON or signaling an error for other requests."
 ;; TODO This returns actual image data, not JSON!
 ;; (defun tumblesocks-api-blog-avatar ()
 ;;   "Gathers info about the given blog's avatar. Defaults to `tumblesocks-blog'"
-;    (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+;;   (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
 ;;   (tumblesocks-api-http-noauth-get
 ;;    (tumblesocks-api-url "/blog/" tumblesocks-blog "/avatar")))
 
@@ -216,7 +232,7 @@ returning JSON or signaling an error for other requests."
   "Gathers info about the `tumblesocks-blog''s followers.
 
 See http://www.tumblr.com/docs/en/api/v2 for information about the returned JSON."
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (tumblesocks-api-http-oauth-post
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/followers") '()))
 
@@ -231,7 +247,7 @@ If given, retrieve just posts with the given attributes (args)
 
 See http://www.tumblr.com/docs/en/api/v2 for information about
 the returned JSON."
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (let ((args '()))
     (when id (aput 'args "id" id))
     (when tag (aput 'args "tag" tag))
@@ -249,7 +265,7 @@ the returned JSON."
 
 (defun tumblesocks-api-blog-queued-posts (&optional offset filter)
   "Retrieve queued blog posts from `tumblesocks-blog'."
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (let ((args '()))
     (when offset (aput 'args "offset" offset))
     (when filter (aput 'args "filter" filter))
@@ -260,7 +276,7 @@ the returned JSON."
 (defun tumblesocks-api-blog-draft-posts (&optional filter)
   "Retrieve draft blog posts from `tumblesocks-blog'. You need
 write access to it!"
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (let ((args '()))
     (when filter (aput 'args "filter" filter))
     (tumblesocks-api-http-oauth-post
@@ -269,7 +285,7 @@ write access to it!"
 
 (defun tumblesocks-api-blog-submission-posts (&optional offset filter)
   "Retrieve submission blog posts from `tumblesocks-blog'."
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (let ((args '()))
     (when offset (aput 'args "offset" offset))
     (when filter (aput 'args "filter" filter))
@@ -285,14 +301,14 @@ If you're making a text post, for example, args should be something like
 '((\"type\" . \"text\")
   (\"title\" . \"How to use the Tumblr API\")
   (\"body\" . \"...\"))"
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (tumblesocks-api-http-oauth-post
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/post")
    args))
 
 (defun tumblesocks-api-edit-post (id &optional args)
   "Edit the post with the given id. args should be as in `tumblesocks-new-post'."
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (aput 'args "id" id)
   (tumblesocks-api-http-oauth-post
    (tumblesocks-api-url "/blog/" tumblesocks-blog "/post/edit")
@@ -300,7 +316,7 @@ If you're making a text post, for example, args should be something like
 
 (defun tumblesocks-api-reblog-post (id reblog_key &optional comment)
   "Reblog a post with the given id and reblog key."
-  (unless tumblesocks-blog "Which blog? Please set `tumblesocks-blog'")
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
   (let ((args `(("id" . ,id) ("reblog_key" . ,reblog_key))))
     (when (and comment (not (string= comment "")))
       (aput 'args "comment" comment))
