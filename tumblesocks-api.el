@@ -122,6 +122,22 @@ error if the error code is not in the 200 category."
       (cons (cons (intern (substring (symbol-name key) 1)) value)
             (tumblesocks-plist-to-alist rest)))))
 
+(defun tumblesocks-api-http-oauth-get (url params)
+  "Post to an API-key-authenticated Tumblr API endpoint (url),
+using the given POST parameters (params, a keyword plist).
+
+This function will return the response as JSON, or will signal an
+error if the error code is not in the 200 category."
+  (with-current-buffer (oauth-url-retrieve
+                        tumblesocks-token
+                        (concat url "?api_key=" tumblesocks-consumer-key
+                                (mapconcat
+                                 '(lambda (x)
+                                    (concat "&" (url-hexify-string (format "%s" (car x)))
+                                            "=" (url-hexify-string (format "%s" (cdr x)))))
+                                 (tumblesocks-plist-to-alist params) "")))
+    (tumblesocks-api-process-response)))
+
 (defun tumblesocks-api-http-apikey-get (url params)
   "Post to an API-key-authenticated Tumblr API endpoint (url),
 using the given POST parameters (params, a keyword plist).
@@ -280,7 +296,7 @@ the returned JSON."
                (and reblog_info `(:reblog_info ,reblog_info))
                (and notes_info `(:notes_info ,notes_info))
                (and filter `(:filter ,filter)))))
-    (tumblesocks-api-http-apikey-get
+    (tumblesocks-api-http-oauth-get
      (tumblesocks-api-url "/blog/"
                           tumblesocks-blog
                           "/posts"

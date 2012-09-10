@@ -20,6 +20,7 @@
     (define-key tumblesocks-view-mode-map "s" 'tumblesocks-view-posts-tagged)
     (define-key tumblesocks-view-mode-map "r" 'tumblesocks-view-reblog-post-at-point)
     (define-key tumblesocks-view-mode-map (kbd "RET") 'tumblesocks-view-post-at-point)
+    (define-key tumblesocks-view-mode-map (kbd "SPC") 'forward-page)
     (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog)
     (define-key tumblesocks-view-mode-map "d" 'tumblesocks-view-delete-post-at-point)
     (define-key tumblesocks-view-mode-map "e" 'tumblesocks-view-edit-post-at-point)
@@ -280,7 +281,7 @@ blogdata to be filtered with the 'text' filter.)"
 This function internally dispatches to other functions that are
 better suited to inserting each post."
   (tumblesocks-bind-plist-keys post
-    (blog_name id post_url type date reblog_key tags liked note_count
+    (blog_name id post_url type date reblog_key tags liked note_count liked
                ;; For photo posts:
                photos caption width
                ;; For quote posts:
@@ -326,6 +327,8 @@ better suited to inserting each post."
     (when (and note_count (> note_count 0))
       (insert " (" (format "%d" note_count) " note"
               (if (= 1 note_count) "" "s") ")"))
+    (when liked
+      (insert " (Liked)"))
     (insert "\n")
     (when verbose
       (insert
@@ -563,7 +566,10 @@ You can browse around, edit, and delete posts from here.
             (tumblesocks-api-user-like post_id reblog_key)
             (message "Liked this post."))
         (tumblesocks-api-user-unlike post_id reblog_key)
-        (message "Unliked this post.")))))
+        (message "Unliked this post."))
+      (let ((pos (point)))
+        (tumblesocks-view-refresh)
+        (goto-char pos)))))
 
 (defun tumblesocks-view-posts-tagged (tag)
   "Search for posts with the given tag."
