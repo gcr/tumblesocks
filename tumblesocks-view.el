@@ -409,22 +409,24 @@ better suited to inserting each post."
 
 
 
-(defun tumblesocks-view-prepare-buffer (blogtitle)
+(defun tumblesocks-view-prepare-buffer (blogtitle &optional preserve-page-offset)
   "Create a new buffer to begin viewing a blog."
   (pop-to-buffer-same-window (concat "*Tumblr: " blogtitle "*"))
   (setq buffer-read-only nil)
   (erase-buffer)
-  ;; We must save the current pagination offset...
+  ;; We must save the current pagination offset;
+  ;; tumblesocks-refresh-view is called when we move through pages.
   (let ((offset tumblesocks-view-current-offset))
     (tumblesocks-view-mode)
-    (setq tumblesocks-view-current-offset offset)))
+    (when preserve-page-offset
+      (setq tumblesocks-view-current-offset offset))))
 (defun tumblesocks-view-finishrender ()
   "Finish creating the blog buffer, ready to present to the user"
   (set-buffer-modified-p nil)
   (setq buffer-read-only t)
   (goto-char (or tumblesocks-view-content-start (point-min))))
 
-(defun tumblesocks-view-blog (blogname)
+(defun tumblesocks-view-blog (blogname &optional preserve-page-offset)
   "View the given blog (URL or name)"
   (interactive
    (list (read-string
@@ -441,7 +443,8 @@ better suited to inserting each post."
                          nil nil nil tumblesocks-posts-per-page
                          tumblesocks-view-current-offset nil nil "html")))
     (tumblesocks-view-prepare-buffer
-     (plist-get blog-info :title))
+     (plist-get blog-info :title)
+     preserve-page-offset)
     ;; Draw blog info
     (let ((begin (point)))
       (tumblesocks-view-insert-parsed-html-fragment
@@ -462,17 +465,17 @@ better suited to inserting each post."
      (plist-get returned-data :total_posts))
     (tumblesocks-view-finishrender)
     (setq tumblesocks-view-refresh-action
-          `(lambda () (tumblesocks-view-blog ,blogname))))) ; <-- CLOSURE HACK :p
+          `(lambda () (tumblesocks-view-blog ,blogname t))))) ; <-- CLOSURE HACK :p
 
 ;;;###autoload
-(defun tumblesocks-view-dashboard ()
+(defun tumblesocks-view-dashboard (&optional preserve-page-offset)
   "View the posts on your dashboard.
 
 You can browse around, edit, and delete posts from here.
 
 \\{tumblesocks-view-mode-map}"
   (interactive)
-  (tumblesocks-view-prepare-buffer "Dashboard")
+  (tumblesocks-view-prepare-buffer "Dashboard" preserve-page-offset)
   (let ((dashboard-data (tumblesocks-api-user-dashboard
                          tumblesocks-posts-per-page
                          tumblesocks-view-current-offset nil nil nil nil)))
@@ -486,7 +489,7 @@ You can browse around, edit, and delete posts from here.
      99999) ; allow them to browse practically infinite posts
     (tumblesocks-view-finishrender)
     (setq tumblesocks-view-refresh-action
-          '(lambda () (tumblesocks-view-dashboard)))))
+          '(lambda () (tumblesocks-view-dashboard t)))))
 
 (defun tumblesocks-view-post (post_id)
   "View a post in its own dedicated buffer, with notes"
