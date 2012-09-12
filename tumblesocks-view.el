@@ -10,6 +10,27 @@
   :type 'number
   :group 'tumblesocks)
 
+(defcustom tumblesocks-desired-image-size 400
+  "The desired width of images to display in post listings.
+
+If an alternative image exists that's this many pixels wide, we
+will show it, otherwise we will show the original size image. Use
+0 to always show the full-isze original image.
+
+This both 1. saves bandwith, 2. keeps Tumblesocks from clogging
+up your emacs with too many slow network connections to download
+all those huge images"
+  :type 'number
+  :group 'tumblesocks)
+
+(defcustom tumblesocks-show-full-images-in-post t
+  "Whether to show full-sized images when viewing individual posts.
+
+This causes Tumblesocks to ignore the setting of
+`tumblesocks-desired-image-size' when viewing posts."
+  :type 'boolean
+  :group 'tumblesocks)
+
 (defvar tumblesocks-view-mode-map
   (let ((tumblesocks-view-mode-map (make-keymap)))
     (define-key tumblesocks-view-mode-map "q" 'quit-window)
@@ -361,9 +382,14 @@ better suited to inserting each post."
                          ;; The first is usually the biggest, the
                          ;; third is a good compromise
                          (let* ((alts (plist-get photodata :alt_sizes))
-                                (alt (elt alts (if (> (length alts) 2)
-                                                   2
-                                                 0))))
+                                (desired-size-alts
+                                 (delq nil
+                                  (mapcar '(lambda(alt)
+                                             (and (= (plist-get alt :width)
+                                                     tumblesocks-desired-image-size)
+                                                  alt))
+                                          alts)))
+                                (alt (car (or desired-size-alts alts))))
                            (list `(img ((src . ,(plist-get alt :url))))
                                  ;;`(br)
                                  (plist-get photodata :caption))))
@@ -505,7 +531,10 @@ You can browse around, edit, and delete posts from here.
              (plist-get post :blog_name)
              post_id))
     (setq tumblesocks-view-content-start (point-marker))
-    (tumblesocks-view-render-post post t)
+    (if tumblesocks-show-full-images-in-post
+        (let ((tumblesocks-desired-image-size 0))
+          (tumblesocks-view-render-post post t))
+      (tumblesocks-view-render-post post t))
     (tumblesocks-view-render-notes notes)
     (tumblesocks-view-finishrender)
     (setq tumblesocks-view-refresh-action
