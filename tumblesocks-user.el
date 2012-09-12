@@ -26,7 +26,7 @@
   "Create a new Tumblr markdown text post from the given region, returning the ID and copying the URL to the clipboard."
   (interactive "r\nsTitle: \nsTags (optional, comma separated): ")
   (when (and tags (string= tags "")) (setq tags nil))
-  (when (string= title "") (error "You must provide a title."))
+  ;;(when (string= title "") (error "You must provide a title."))
   (let ((args (append
                `(:type "text"
                  :format "markdown"
