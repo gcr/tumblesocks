@@ -3,6 +3,15 @@
 (require 'tumblesocks-api)
 (provide 'tumblesocks-user)
 
+(defcustom tumblesocks-post-default-state 'published
+  "Change the default state of your newly created posts"
+  :type '(choice (const :tag "Published" 'published)
+                 (const :tag "Draft" 'draft)
+                 (const :tag "Queue" 'queue)
+                 (const :tag "Private" 'private))
+  :group 'tumblesocks)
+
+
 (defun tumblesocks-follow-blog (blog)
   "Follow the given Tumblr blog"
   (interactive "sTumblr blog to follow (URL): ")
@@ -30,6 +39,7 @@
   (let ((args (append
                `(:type "text"
                  :format "markdown"
+                 :state ,tumblesocks-post-default-state
                  :body ,(buffer-substring begin end)
                  :title ,title)
                (and tags `(:tags ,tags)))))
