@@ -31,7 +31,7 @@
   (tumblesocks-api-user-unfollow blog-url)
   (message (concat "No longer following " blog-url)))
 
-(defun tumblesocks-text-post-from-region (begin end title &optional tags)
+(defun tumblesocks-text-post-from-region (begin end title &optional tags state)
   "Create a new Tumblr markdown text post from the given region, returning the ID and copying the URL to the clipboard."
   (interactive "r\nsTitle: \nsTags (optional, comma separated): ")
   (when (and tags (string= tags "")) (setq tags nil))
@@ -39,7 +39,7 @@
   (let ((args (append
                `(:type "text"
                  :format "markdown"
-                 :state ,tumblesocks-post-default-state
+                 :state ,(or state tumblesocks-post-default-state)
                  :body ,(buffer-substring begin end)
                  :title ,title)
                (and tags `(:tags ,tags)))))
