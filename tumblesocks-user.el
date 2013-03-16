@@ -9,6 +9,7 @@
                  (const :tag "Draft" 'draft)
                  (const :tag "Queue" 'queue)
                  (const :tag "Private" 'private)
+                 (const :tag "Schedule" 'schedule)
                  (const :tag "Ask" 'ask))
   :group 'tumblesocks)
 
@@ -20,7 +21,8 @@
                        '("published"
                          "draft"
                          "queue"
-                         "private") nil t)
+                         "private"
+                         "schedule") nil t)
     tumblesocks-post-default-state))
 
 (defun tumblesocks-follow-blog (blog)
@@ -54,6 +56,10 @@
                  :body ,(buffer-substring begin end)
                  :title ,title)
                (and tags `(:tags ,tags)))))
+    (if (string= (plist-get args :state) "schedule")
+        (progn
+          (plist-put args :state "queue")
+          (plist-put args :publish_on (read-string "Publish On: "))))
     (let* ((blog-url
             (plist-get (plist-get (tumblesocks-api-blog-info) :blog) :url))
            (new-post-id (format "%d" (plist-get (tumblesocks-api-new-post args)
