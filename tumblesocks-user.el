@@ -8,9 +8,20 @@
   :type '(choice (const :tag "Published" 'published)
                  (const :tag "Draft" 'draft)
                  (const :tag "Queue" 'queue)
-                 (const :tag "Private" 'private))
+                 (const :tag "Private" 'private)
+                 (const :tag "Ask" 'ask))
   :group 'tumblesocks)
 
+(defun tumblesocks-get-post-state (&optional state)
+  (interactive)
+  (if (or (string= tumblesocks-post-default-state "Ask")
+          (string= state "Ask"))
+      (completing-read "State: "
+                       '("published"
+                         "draft"
+                         "queue"
+                         "private") nil t)
+    tumblesocks-post-default-state))
 
 (defun tumblesocks-follow-blog (blog)
   "Follow the given Tumblr blog"
@@ -39,7 +50,7 @@
   (let ((args (append
                `(:type "text"
                  :format "markdown"
-                 :state ,(or state tumblesocks-post-default-state)
+                 :state ,(tumblesocks-get-post-state state)
                  :body ,(buffer-substring begin end)
                  :title ,title)
                (and tags `(:tags ,tags)))))
