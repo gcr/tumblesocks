@@ -8,9 +8,22 @@
   :type '(choice (const :tag "Published" 'published)
                  (const :tag "Draft" 'draft)
                  (const :tag "Queue" 'queue)
-                 (const :tag "Private" 'private))
+                 (const :tag "Private" 'private)
+                 (const :tag "Schedule" 'schedule)
+                 (const :tag "Ask" 'ask))
   :group 'tumblesocks)
 
+(defun tumblesocks-get-post-state (&optional state)
+  (interactive)
+  (if (or (string= (downcase tumblesocks-post-default-state) "ask")
+          (string= (downcase state) "ask"))
+      (completing-read "State: "
+                       '("published"
+                         "draft"
+                         "queue"
+                         "private"
+                         "schedule") nil t)
+    tumblesocks-post-default-state))
 
 (defun tumblesocks-follow-blog (blog)
   "Follow the given Tumblr blog"
@@ -39,10 +52,14 @@
   (let ((args (append
                `(:type "text"
                  :format "markdown"
-                 :state ,(or state tumblesocks-post-default-state)
+                 :state ,(tumblesocks-get-post-state state)
                  :body ,(buffer-substring begin end)
                  :title ,title)
                (and tags `(:tags ,tags)))))
+    (if (string= (plist-get args :state) "schedule")
+        (progn
+          (plist-put args :state "queue")
+          (plist-put args :publish_on (read-string "Publish On: "))))
     (let* ((blog-url
             (plist-get (plist-get (tumblesocks-api-blog-info) :blog) :url))
            (new-post-id (format "%d" (plist-get (tumblesocks-api-new-post args)
