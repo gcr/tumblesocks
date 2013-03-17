@@ -15,8 +15,8 @@
 
 (defun tumblesocks-get-post-state (&optional state)
   (interactive)
-  (if (or (string= tumblesocks-post-default-state "Ask")
-          (string= state "Ask"))
+  (if (or (string= (downcase tumblesocks-post-default-state) "ask")
+          (string= (downcase state) "ask"))
       (completing-read "State: "
                        '("published"
                          "draft"
