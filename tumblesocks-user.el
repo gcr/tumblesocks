@@ -3,20 +3,21 @@
 (require 'tumblesocks-api)
 (provide 'tumblesocks-user)
 
-(defcustom tumblesocks-post-default-state 'published
+(defcustom tumblesocks-post-default-state "published"
   "Change the default state of your newly created posts"
-  :type '(choice (const :tag "Published" 'published)
-                 (const :tag "Draft" 'draft)
-                 (const :tag "Queue" 'queue)
-                 (const :tag "Private" 'private)
-                 (const :tag "Schedule" 'schedule)
-                 (const :tag "Ask" 'ask))
+  :type '(choice (const :tag "Published" "published")
+                 (const :tag "Draft" "draft")
+                 (const :tag "Queue" "queue")
+                 (const :tag "Private" "private")
+                 (const :tag "Schedule" "schedule")
+                 (const :tag "Ask" "ask"))
   :group 'tumblesocks)
 
 (defun tumblesocks-get-post-state (&optional state)
   (interactive)
   (if (or (string= (downcase tumblesocks-post-default-state) "ask")
-          (string= (downcase state) "ask"))
+          (and (not (eq nil state))
+               (string= (downcase state) "ask")))
       (completing-read "State: "
                        '("published"
                          "draft"
