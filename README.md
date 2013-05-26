@@ -59,6 +59,18 @@ must have these dependencies:
 Add all of that to your `load-path`, and make sure `(require
 'tumblesocks)` doesn't complain.
 
+If you're on Windows, you may need extra libraries; see
+[this ticket](https://github.com/gcr/tumblesocks/issues/4) for
+details. In particular, you'll need a build of emacs that includes
+`libxml` support; the latest binary from
+[this Dropbox folder](https://www.dropbox.com/sh/7jr3vbv9tm1zod0/jPuvfrJAe8)
+maintained by Dani Moncayo seems to work. Once you have that version,
+follow
+[Tip number 4 on this blog post](http://gregorygrubbs.com/emacs/10-tips-emacs-windows/)
+if you want inline images to work. (Thanks to MatthewDarling for this
+windows advice). If you're on Linux, you shouldn't have these
+problems.
+
 How to connect Tumblesocks to your tumblr account
 -------------------------------------------------
 The first time you use Tumblesocks, you mist connect Emacs to your
