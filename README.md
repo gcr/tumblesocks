@@ -64,8 +64,10 @@ If you're on Windows, you may need extra libraries; see
 details. In particular, you'll need a build of emacs that includes
 `libxml` support; the latest binary from
 [this Dropbox folder](https://www.dropbox.com/sh/7jr3vbv9tm1zod0/jPuvfrJAe8)
-maintained by Dani Moncayo seems to work. Once you have that version,
-follow
+maintained by Dani Moncayo seems to work. You may additionally need
+[the Windows build of libxml](http://sourceforge.net/projects/ezwinports/files/)
+in the same folder as the emacs.exe binary. Once you have all that in
+place, follow
 [Tip number 4 on this blog post](http://gregorygrubbs.com/emacs/10-tips-emacs-windows/)
 if you want inline images to work. (Thanks to MatthewDarling for this
 windows advice). If you're on Linux, you shouldn't have these
