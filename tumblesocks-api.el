@@ -53,7 +53,8 @@ call `tumblesocks-api-reauthenticate' after this."
   (when (or (not tumblesocks-secret-key)
             (not tumblesocks-consumer-key))
     (error "You MUST set both `tumblesocks-secret-key' and `tumblesocks-consumer-key' to use tumblesocks."))
-  (let ((tumblesocks-token-file (concat (file-name-as-directory user-emacs-directory)
+  (let ((oauth-callback-url "http://www.sneakygcr.net/oauth-dummy-endpoint.htm")
+        (tumblesocks-token-file (concat (file-name-as-directory user-emacs-directory)
                                         "tumblr-oauth-token")))
     (when (file-exists-p tumblesocks-token-file)
       (save-excursion
@@ -128,15 +129,16 @@ using the given POST parameters (params, a keyword plist).
 
 This function will return the response as JSON, or will signal an
 error if the error code is not in the 200 category."
-  (with-current-buffer (oauth-url-retrieve
-                        tumblesocks-token
-                        (concat url "?api_key=" tumblesocks-consumer-key
-                                (mapconcat
-                                 '(lambda (x)
-                                    (concat "&" (url-hexify-string (format "%s" (car x)))
-                                            "=" (url-hexify-string (format "%s" (cdr x)))))
-                                 (tumblesocks-plist-to-alist params) "")))
-    (tumblesocks-api-process-response)))
+  (let ((oauth-callback-url "http://www.sneakygcr.net/oauth-dummy-endpoint.htm"))
+    (with-current-buffer (oauth-url-retrieve
+                          tumblesocks-token
+                          (concat url "?api_key=" tumblesocks-consumer-key
+                                  (mapconcat
+                                   '(lambda (x)
+                                      (concat "&" (url-hexify-string (format "%s" (car x)))
+                                              "=" (url-hexify-string (format "%s" (cdr x)))))
+                                   (tumblesocks-plist-to-alist params) "")))
+      (tumblesocks-api-process-response))))
 
 (defun tumblesocks-api-http-apikey-get (url params)
   "Post to an API-key-authenticated Tumblr API endpoint (url),
@@ -160,14 +162,15 @@ using the given POST parameters (params, an alist).
 This function will return the response as JSON, or will signal an
 error if the error code is not in the 200 category."
   (unless tumblesocks-token (tumblesocks-api-reauthenticate))
-  (with-current-buffer
-      (oauth-post-url
-       tumblesocks-token url
-       (mapcar '(lambda (x)
-                  (cons (format "%s" (car x))
-                        (format "%s" (cdr x))))
-               (tumblesocks-plist-to-alist params)))
-    (tumblesocks-api-process-response)))
+  (let ((oauth-callback-url "http://www.sneakygcr.net/oauth-dummy-endpoint.htm"))
+    (with-current-buffer
+        (oauth-post-url
+         tumblesocks-token url
+         (mapcar '(lambda (x)
+                    (cons (format "%s" (car x))
+                          (format "%s" (cdr x))))
+                 (tumblesocks-plist-to-alist params)))
+      (tumblesocks-api-process-response))))
 
 (defun tumblesocks-api-process-response ()
   "Process Tumblr's response in the current buffer,
