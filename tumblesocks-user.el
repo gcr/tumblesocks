@@ -4,7 +4,9 @@
 (provide 'tumblesocks-user)
 
 (defcustom tumblesocks-post-default-state "published"
-  "Change the default state of your newly created posts"
+  "Change the default state of your newly created posts.
+
+Use 'ask' to prompt the user each time a post is created."
   :type '(choice (const :tag "Published" "published")
                  (const :tag "Draft" "draft")
                  (const :tag "Queue" "queue")
@@ -14,6 +16,8 @@
   :group 'tumblesocks)
 
 (defun tumblesocks-get-post-state (&optional state)
+  "If the default post state is 'ask', then this function asks
+the user what to do for each post."
   (interactive)
   (if (or (string= (downcase tumblesocks-post-default-state) "ask")
           (and (not (eq nil state))
