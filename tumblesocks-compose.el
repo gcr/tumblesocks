@@ -122,7 +122,7 @@ prompted for a new title and new tags."
          (body (plist-get the-post :body)))
     (unless (string= type "text")
       (error "We can only edit text posts."))
-    (pop-to-buffer (concat "*Tumblr: Ediitng " title "*"))
+    (pop-to-buffer (concat "*Tumblr: Editing " title "*"))
     (erase-buffer)
     (tumblesocks-compose-mode)
     (setq header-line-format (concat "Editing: " title))
