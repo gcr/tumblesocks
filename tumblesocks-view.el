@@ -617,9 +617,9 @@ You can browse around, edit, and delete posts from here.
 
 (defun tumblesocks-view-posts-tagged (tag)
   "Search for posts with the given tag."
-  ;; (interactive "sSearch for posts with tag: ")
   (interactive (list (read-from-minibuffer
-                      "Search string: " (tumblesocks-view--dwim-at-point))))
+                      "Search for posts with tag: " 
+                      (tumblesocks-view--dwim-at-point))))
   (tumblesocks-view-prepare-buffer
    (concat "Tag search: " tag))
   (tumblesocks-view-render-blogdata
