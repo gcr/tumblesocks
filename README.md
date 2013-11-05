@@ -107,6 +107,12 @@ can ask Tumblesocks to forget your key by issuing
 `M-x tumblesocks-api-test-auth` again to reconnect your Emacs to your
 Tumblr account.
 
+If it won't authorize in the first place and just says "Looks like
+something broke." it might be the OAuth package wasn't configured.
+Try to see if the variable `oauth-nonce-function` is set, if not add
+`(setq oauth-nonce-function 'oauth-internal-make-nonce)` to your
+`.emacs`.
+
 Other "advanced" commands
 -------------------------
 

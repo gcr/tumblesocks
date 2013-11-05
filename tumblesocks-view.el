@@ -1,8 +1,12 @@
 ;; tumblesocks-view.el -- Provide an interface to view tumblr blog posts.
 
+(eval-when-compile
+  (require 'easymenu))
+
 (require 'tumblesocks-api)
 (require 'tumblesocks-compose)
 (require 'shr)
+
 (provide 'tumblesocks-view)
 
 (defcustom tumblesocks-posts-per-page 20
@@ -603,9 +607,19 @@ You can browse around, edit, and delete posts from here.
         (tumblesocks-view-refresh)
         (goto-char pos)))))
 
+ (defun tumblesocks-view--dwim-at-point ()
+  "If there's an active selection, return that. Otherwise, get
+   the symbol at point."
+  (if (use-region-p)
+      (buffer-substring-no-properties (region-beginning) (region-end))
+    (if (symbol-at-point)
+        (symbol-name (symbol-at-point)))))
+
 (defun tumblesocks-view-posts-tagged (tag)
   "Search for posts with the given tag."
-  (interactive "sSearch for posts with tag: ")
+  (interactive (list (read-from-minibuffer
+                      "Search for posts with tag: " 
+                      (tumblesocks-view--dwim-at-point))))
   (tumblesocks-view-prepare-buffer
    (concat "Tag search: " tag))
   (tumblesocks-view-render-blogdata
@@ -614,3 +628,41 @@ You can browse around, edit, and delete posts from here.
   (tumblesocks-view-finishrender)
   (setq tumblesocks-view-refresh-action
         `(lambda () (tumblesocks-view-posts-tagged ,tag))))
+
+(easy-menu-define tumblesocks-mode-menu tumblesocks-view-mode-map
+  "Menu used when tumblesocks major mode is active."
+  '("Tumble"
+    ["Compose Post" tumblesocks-view-compose-new-post
+     :help "Compose new post."]
+    ["Edit Post" tumblesocks-view-edit-new-post
+     :help "Edit the post under the cursor."]
+    ["Delete Post" tumblesocks-view-delete-new-post
+     :help "Delete the post under the cursor."]
+    "---"
+    ["Follow" tumblesocks-view-follow-blog-at-point
+     :help "Follow whichever blog wrote the post underneath the cursor."]
+    ["Like" tumblesocks-view-like-post-at-point
+     :help "Like the post underneath the cursor."]
+    ["Reblog" tumblesocks-view-reblog-post-at-point
+     :help "Reblog the post under the cursor."]
+    "---"
+    ["Next Post" tumblesocks-view-next-post
+     :help "Move to next post."]
+    ["View Post" tumblesocks-view-post-at-point
+     :help "Open the post underneath the cursor in a new page, showing its notes."]
+    ["View Blog" tumblesocks-view-blog
+     :help "Visit Blog."]
+    ["Previous Post" tumblesocks-view-previous-post
+     :help "Move to the previous post."]
+    "--"
+    ["Search" tumblesocks-view-posts-tagged
+     :help "Search for posts with a certain tag."]    
+    ["Refresh List" tumblesocks-view-refresh
+     :help "Refresh the current view (download new posts)."]
+    "---"
+    ["Documentation" (browse-url "https://github.com/gcr/tumblesocks")
+     :help "View the documentation on github."]
+    ["Settings" (customize-group 'tumblesocks)
+     :help "tumblesocks-mode settings"]
+    ["Quit" quit-window
+     :help "Close the current frame"]))
