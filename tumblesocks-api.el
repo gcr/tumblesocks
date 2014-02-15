@@ -36,6 +36,12 @@ to pick which block to list posts for, so if you want to temporarily ask for a d
   :type 'string
   :group 'tumblesocks)
 
+(defcustom tumblesocks-token-file (concat (file-name-as-directory user-emacs-directory)
+                                         "tumblr-oauth-token")
+  "Location of the file containing the oath-token as returned by Tumblr."
+  :type 'file
+  :group 'tumblesocks)
+
 (defvar tumblesocks-token nil)
 
 (defun tumblesocks-api-forget-authentication ()
@@ -43,19 +49,15 @@ to pick which block to list posts for, so if you want to temporarily ask for a d
 call `tumblesocks-api-reauthenticate' after this."
   (interactive)
   (setq tumblesocks-token nil)
-  (let ((tumblesocks-token-file (concat (file-name-as-directory user-emacs-directory)
-                                        "tumblr-oauth-token")))
-    (when (file-exists-p tumblesocks-token-file)
-      (delete-file tumblesocks-token-file))))
+  (when (file-exists-p tumblesocks-token-file)
+    (delete-file tumblesocks-token-file)))
 
 (defun tumblesocks-api-reauthenticate ()
   "Read our tumblr token from the tumblr token file, or generate a new one."
   (when (or (not tumblesocks-secret-key)
             (not tumblesocks-consumer-key))
     (error "You MUST set both `tumblesocks-secret-key' and `tumblesocks-consumer-key' to use tumblesocks."))
-  (let ((oauth-callback-url "http://www.sneakygcr.net/oauth-dummy-endpoint.htm")
-        (tumblesocks-token-file (concat (file-name-as-directory user-emacs-directory)
-                                        "tumblr-oauth-token")))
+  (let ((oauth-callback-url "http://www.sneakygcr.net/oauth-dummy-endpoint.htm"))
     (when (file-exists-p tumblesocks-token-file)
       (save-excursion
         (find-file tumblesocks-token-file)
