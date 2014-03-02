@@ -61,16 +61,17 @@ Add all of that to your `load-path`, and make sure `(require
 
 If you're on Windows, you may need extra libraries; see
 [this ticket](https://github.com/gcr/tumblesocks/issues/4) for
-details. In particular, you'll need a build of emacs that includes
-`libxml` support; the latest binary from
-[this Dropbox folder](https://www.dropbox.com/sh/7jr3vbv9tm1zod0/jPuvfrJAe8)
-maintained by Dani Moncayo seems to work. You may additionally need
+details. In short:
+
+* You'll need a build of Emacs that includes
+`libxml` support; Dani Moncayo's [emacs-bin](http://sourceforge.net/projects/emacs-bin/) includes this and other libraries.
+* You may also need
 [the Windows build of libxml](http://sourceforge.net/projects/ezwinports/files/)
-in the same folder as the emacs.exe binary. Once you have all that in
-place, follow
-[Tip number 4 on this blog post](http://gregorygrubbs.com/emacs/10-tips-emacs-windows/)
-if you want inline images to work. (Thanks to MatthewDarling for this
-windows advice). If you're on Linux, you shouldn't have these
+in the same folder as your emacs.exe binary. 
+* [Tip number 4 on this blog post](http://gregorygrubbs.com/emacs/10-tips-emacs-windows/)
+will allow you to see images inline in Emacs generally, and in Tumblesocks.
+
+If you're on Linux, you shouldn't have these
 problems.
 
 How to connect Tumblesocks to your tumblr account
