@@ -4,6 +4,7 @@
 
 ;; Author: gcr <gcr@sneakygcr.net>
 ;; URL: http://github.com/gcr/tumblesocks
+;; License: as-is
 
 (defgroup tumblesocks nil
   "Emacs tumblr client"
