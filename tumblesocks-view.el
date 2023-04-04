@@ -205,7 +205,7 @@ This causes Tumblesocks to ignore the setting of
   "Renders and inserts an HTML sexp. If inline is t, then <p> tags will have no effect."
   (let ((shr-width nil))
     (if inline
-        (flet ((shr-ensure-paragraph () 0))
+        (cl-flet ((shr-ensure-paragraph () 0)) ; cl-flet
           ;; disable newlines, for now ...
           (condition-case nil
               ;; this must go in the flet, sorry!
@@ -214,6 +214,7 @@ This causes Tumblesocks to ignore the setting of
       (condition-case nil
           (shr-insert-document html-frag-parsed)
         (error (message "Couldn't insert HTML."))))))
+
 (defun tumblesocks-view-insert-html-fragment (html-fragment &optional inline)
   "Renders and inserts an HTML fragment. If inline is t, then <p> tags will have no effect."
   (let (html-frag-parsed)
@@ -547,42 +548,43 @@ You can browse around, edit, and delete posts from here.
 (defun tumblesocks-view-render-notes (notes)
   "Render the given notes into the current buffer."
   (let ((start (point)))
-    (flet ((comment-that ()
-              (put-text-property start (point) 'face font-lock-comment-face)
-              (setq start (point)))
-           (bold-that ()
-              (put-text-property start (point) 'face
-                                 (cons '(:weight bold) font-lock-comment-face))
-              (setq start (point))))
+    (cl-flet ((comment-that ()
+                            (put-text-property start (point) 'face font-lock-comment-face)
+                            (setq start (point)))
+              (bold-that ()
+                         (put-text-property start (point) 'face
+                                            (cons '(:weight bold) font-lock-comment-face))
+                         (setq start (point))))
       (insert "-- Notes:\n")
       (comment-that)
       (dolist (note notes)
-        (tumblesocks-bind-plist-keys note
-           (type post_id blog_name blog_url reply_text answer_text added_text)
-           (cond ((string= type "posted")
-                  (insert blog_name " posted this"))
-                 ((string= type "answer")
-                  (insert blog_name " answers:\n  ")
-                  (comment-that)
-                  (tumblesocks-view-insert-html-fragment answer_text t)
-                  (bold-that))
-                 ((string= type "reblog")
-                  (insert blog_name " reblogged this on " blog_url))
-                 ((string= type "like")
-                  (insert blog_name " liked this"))
-                 ((string= type "reply")
-                  (insert blog_name " says: ")
-                  (comment-that)
-                  (tumblesocks-view-insert-html-fragment reply_text t)
-                  (bold-that))
-                 (t (insert (format "%S" note))))
-           (when added_text
-             (insert "\n  ")
-             (comment-that)
-             (insert added_text)
-             (bold-that))
-           (insert "\n")
-           (comment-that))))))
+        (tumblesocks-bind-plist-keys
+         note
+         (type post_id blog_name blog_url reply_text answer_text added_text)
+         (cond ((string= type "posted")
+                (insert blog_name " posted this"))
+               ((string= type "answer")
+                (insert blog_name " answers:\n  ")
+                (comment-that)
+                (tumblesocks-view-insert-html-fragment answer_text t)
+                (bold-that))
+               ((string= type "reblog")
+                (insert blog_name " reblogged this on " blog_url))
+               ((string= type "like")
+                (insert blog_name " liked this"))
+               ((string= type "reply")
+                (insert blog_name " says: ")
+                (comment-that)
+                (tumblesocks-view-insert-html-fragment reply_text t)
+                (bold-that))
+               (t (insert (format "%S" note))))
+         (when added_text
+           (insert "\n  ")
+           (comment-that)
+           (insert added_text)
+           (bold-that))
+         (insert "\n")
+         (comment-that))))))
 
 (defun tumblesocks-view-like-post-at-point (like-p)
   "Like the post underneath point. With prefix arg (C-u), unlike it."
@@ -618,7 +620,7 @@ You can browse around, edit, and delete posts from here.
 (defun tumblesocks-view-posts-tagged (tag)
   "Search for posts with the given tag."
   (interactive (list (read-from-minibuffer
-                      "Search for posts with tag: " 
+                      "Search for posts with tag: "
                       (tumblesocks-view--dwim-at-point))))
   (tumblesocks-view-prepare-buffer
    (concat "Tag search: " tag))
@@ -656,7 +658,7 @@ You can browse around, edit, and delete posts from here.
      :help "Move to the previous post."]
     "--"
     ["Search" tumblesocks-view-posts-tagged
-     :help "Search for posts with a certain tag."]    
+     :help "Search for posts with a certain tag."]
     ["Refresh List" tumblesocks-view-refresh
      :help "Refresh the current view (download new posts)."]
     "---"
@@ -666,3 +668,6 @@ You can browse around, edit, and delete posts from here.
      :help "tumblesocks-mode settings"]
     ["Quit" quit-window
      :help "Close the current frame"]))
+
+(provide 'tumblesocks-view)
+;;; tumblesocks-view.el ends here
