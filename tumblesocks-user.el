@@ -85,3 +85,6 @@ the user what to do for each post."
   "Create a new Tumblr markdown text post from the current buffer, returning the ID and copying the URL to the clipboard."
   (interactive "sTitle: \nsTags (optional, comma separated): ")
   (tumblesocks-text-post-from-region (point-min) (point-max) title tags))
+
+(provide 'tumblesocks-user)
+;;; tumblesocks-user.el ends here
