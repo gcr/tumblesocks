@@ -53,6 +53,7 @@ This causes Tumblesocks to ignore the setting of
     (define-key tumblesocks-view-mode-map "l" 'tumblesocks-view-like-post-at-point)
     (define-key tumblesocks-view-mode-map "o" 'tumblesocks-view-post-url-at-point)
     (define-key tumblesocks-view-mode-map "y" 'tumblesocks-view-yank-post-url-at-point)
+    (define-key tumblesocks-view-mode-map "a" 'tumblesocks-view-notifications)
     tumblesocks-view-mode-map))
 
 (defun tumblesocks-view-compose-new-post ()
