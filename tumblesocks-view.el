@@ -344,7 +344,6 @@ better suited to inserting each post."
       (when tags
         (insert (mapconcat 'identity (mapcar (lambda (tag) (format "#%s" tag)) tags) " ")))
       (insert "\n")
-      (insert "\n")
       ;; Record this post data so we know how to read it next
       (put-text-property begin-post-area (point)
                          'tumblesocks-post-data
