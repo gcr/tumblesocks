@@ -1,6 +1,6 @@
 `tumblesocks-mode` - Tumblr Support for Emacs
 =============================================
-![https://i.ibb.co/w7cYHyj/d2849738d4c24cc0.jpg](https://i.ibb.co/w7cYHyj/d2849738d4c24cc0.jpg)
+![https://i.ibb.co/JR6BwqW/xwd.jpg](https://i.ibb.co/JR6BwqW/xwd.jpg)
 
 Tumblesocks is an Emacs tumblr client. With it, you can write posts,
 check your dashboard, and view blogs and notes.
