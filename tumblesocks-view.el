@@ -327,6 +327,8 @@ better suited to inserting each post."
                ;; For answer posts:
                asking_name asking_url question answer)
     (let ((begin-post-area (point)))
+      (insert (make-string fill-column ?\u2500))
+      (insert "\n")
       (tumblesocks-view-insert-header verbose-header)
       (cond
        ((string= type "text") (tumblesocks-view-insert-text))
