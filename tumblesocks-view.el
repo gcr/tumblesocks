@@ -338,6 +338,10 @@ better suited to inserting each post."
        ((string= type "photo") (tumblesocks-view-insert-photo))
        ((string= type "chat") (tumblesocks-view-insert-chat))
        (t (tumblesocks-view-insert-i-have-no-clue-what-this-is)))
+      ;; Tags
+      (when tags
+        (insert (mapconcat 'identity (mapcar (lambda (tag) (format "#%s" tag)) tags) ", ")))
+      (insert "\n")
       (insert "\n")
       ;; Record this post data so we know how to read it next
       (put-text-property begin-post-area (point)
@@ -350,6 +354,7 @@ better suited to inserting each post."
     (setq begin (point))
     (insert blog_name ":")
     (setq end_bname (point))
+    (put-text-property begin end_bname 'face (list '(:weight bold) 'highlight))
     ;; Title
     (insert " ")
     (cond
