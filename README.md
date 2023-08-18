@@ -1,7 +1,6 @@
 `tumblesocks-mode` - Tumblr Support for Emacs
 =============================================
-<!-- ![http://i.imgur.com/WW6Qo.png](http://i.imgur.com/WW6Qo.png) -->
-![http://i.imgur.com/9wroS.png](http://i.imgur.com/9wroS.png)
+![https://i.ibb.co/w7cYHyj/d2849738d4c24cc0.jpg](https://i.ibb.co/w7cYHyj/d2849738d4c24cc0.jpg)
 
 Tumblesocks is an Emacs tumblr client. With it, you can write posts,
 check your dashboard, and view blogs and notes.
@@ -33,6 +32,9 @@ Managing your posts:
 * **c: Compose new post**. Once you are finished writing your post, use `C-c C-c` to **submit** it. Markdown syntax is supported.
 * **d: Delete** the post under the cursor. (This only works if you made that post.)
 * **e: Edit** the post under the cursor. (This only works if you made that post.)
+
+View activity
+* **a: Notifications** shows you your Notifications (likes, reblogs, milestones, replies.)  `tumblesocks-view-notifications` works as well.
 
 Installing
 ----------
