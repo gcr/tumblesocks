@@ -590,6 +590,29 @@ You can browse around, edit, and delete posts from here.
          (insert "\n")
          (comment-that))))))
 
+(defun tumblesocks-view-notifications ()
+  "View all notfications, newest on top"
+  ;; TODO paging!
+  (interactive)
+  (tumblesocks-api-blog-notifications)
+  (tumblesocks-view-prepare-buffer "notifications")
+  (insert "Notifications")
+  (center-line)
+  (insert "\n\n")
+  (dolist (notification (plist-get (tumblesocks-api-blog-notifications) :notifications))
+    ;;(insert (format "%s\n" notification))
+    (insert (format "%s - " (format-time-string "%D %r" (plist-get notification :timestamp))))
+    (insert (format "%s - " (plist-get notification :type)))
+    (insert (format "%s - " (plist-get notification :from_tumblelog_name)))
+    (when (string= (plist-get notification :type) "reply")
+      (insert (format "%s - " (plist-get notification :reply_text))))
+    (tumblesocks-view-insert-parsed-html-fragment
+     `(img ((src . ,(plist-get notification :media_url)))) t)
+    (insert (format "\n%s\n\n\n" (plist-get notification :target_post_summary))))
+  (tumblesocks-view-finishrender)
+  (setq tumblesocks-view-refresh-action
+        `(lambda () (tumblesocks-view-notifications)))) ; <-- CLOSURE HACK :p
+
 (defun tumblesocks-view-like-post-at-point (like-p)
   "Like the post underneath point. With prefix arg (C-u), unlike it."
   (interactive "P")

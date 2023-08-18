@@ -260,6 +260,17 @@ returning JSON or signaling an error for other requests."
   (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/unlike")
                                    `(:id ,id :reblog_key ,reblog_key)))
 
+(defun tumblesocks-api-blog-notifications (&optional limit offset)
+  "Retrieve the activity items for a specific blog, in reverse chronological order, newest first"
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
+  (let ((args (append
+               (and limit `(:limit ,limit))
+               (and offset `(:offset ,offset)))))
+    (tumblesocks-api-http-oauth-get
+     (tumblesocks-api-url "/blog/"
+                          tumblesocks-blog
+                          "/notifications") args)))
+
 (defun tumblesocks-api-blog-info ()
   "Gather information about the blog listed in
 `tumblesocks-blog'."
