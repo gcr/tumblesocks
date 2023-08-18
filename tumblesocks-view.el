@@ -107,8 +107,11 @@ This causes Tumblesocks to ignore the setting of
   "Open the post under point in a new buffer, showing notes, etc"
   (interactive)
   (when (get-text-property (point) 'tumblesocks-post-data)
-    (tumblesocks-view-post
-     (plist-get (get-text-property (point) 'tumblesocks-post-data) :id))))
+    (let ((id (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                         :id))
+          (tumblesocks-blog (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                                       :blog_name)))
+      (tumblesocks-view-post id))))
 
 (defun tumblesocks-view-post-url-at-point ()
   "Open the post under point in your browser"
@@ -169,9 +172,9 @@ This causes Tumblesocks to ignore the setting of
   "Reblog the post at point, if there is one."
   (interactive)
   (let* ((data (get-text-property (point) 'tumblesocks-post-data))
-         (from-blog (plist-get data :channel-name))
-         (post_id (format "%d" (plist-get data :id)))
-         (reblog_key (plist-get data :reblog_key)))
+	 (from-blog (plist-get data :channel-name))
+	 (post_id (format "%d" (plist-get data :id)))
+	 (reblog_key (plist-get data :reblog_key)))
   (when data
     ;; Get the reblog key.
     ;; (let* ((tumblesocks-blog from-blog)
