@@ -608,6 +608,8 @@ You can browse around, edit, and delete posts from here.
     (insert "\n\n")
     (put-text-property begin (point) 'face font-lock-comment-face))
   (dolist (notification (plist-get (tumblesocks-api-blog-notifications) :notifications))
+    (insert (make-string fill-column ?\u2500))
+    (insert "\n")
     ;;(insert (format "%s\n" notification))
     (insert (format "%s - " (format-time-string "%D %r" (plist-get notification :timestamp))))
     (insert (format "%s - " (plist-get notification :type)))
@@ -616,7 +618,7 @@ You can browse around, edit, and delete posts from here.
       (insert (format "%s - " (plist-get notification :reply_text))))
     (tumblesocks-view-insert-parsed-html-fragment
      `(img ((src . ,(plist-get notification :media_url)))) t)
-    (insert (format "\n%s\n\n\n" (plist-get notification :target_post_summary))))
+    (insert (format "\n%s\n" (plist-get notification :target_post_summary))))
   (tumblesocks-view-finishrender)
   (setq tumblesocks-view-refresh-action
         `(lambda () (tumblesocks-view-notifications)))) ; <-- CLOSURE HACK :p
