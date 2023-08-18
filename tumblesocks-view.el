@@ -352,7 +352,7 @@ better suited to inserting each post."
     (cond
      (title (tumblesocks-view-insert-html-fragment title t))
      (caption (tumblesocks-view-insert-html-fragment caption t))
-     (question (tumblesocks-view-insert-html-fragment question t))
+     ;;(question (tumblesocks-view-insert-html-fragment question t))
      (t (insert " ")))
     ;; Notes
     (when (and note_count (> note_count 0))
@@ -368,14 +368,7 @@ better suited to inserting each post."
        "\nPermalink: ")
       (tumblesocks-view-insert-parsed-html-fragment
        `(a ((href . ,post_url)) ,post_url) t)
-      (insert "\n"))
-    (put-text-property begin end_bname 'face
-                       (list '(:inverse-video t)
-                             '(:weight bold)
-                             font-lock-keyword-face))
-    (put-text-property end_bname (point) 'face
-                       (list '(:weight bold)
-                             'highlight))))
+      (insert "\n"))))
 
 (defun tumblesocks-view-insert-text ()
   (tumblesocks-view-insert-html-fragment body)
