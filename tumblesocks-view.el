@@ -409,11 +409,13 @@ better suited to inserting each post."
   (insert "\n"))
 
 (defun tumblesocks-view-insert-answer ()
-  (insert asking_name " asks: \n  ")
+  (insert asking_name " asks:")
   (let ((start (point))
-        (shr-indentation 4))
+        (shr-indentation 32))
     (tumblesocks-view-insert-html-fragment question t)
-    (put-text-property start (point) 'face font-lock-comment-face))
+    ;;(put-text-property start (point) 'face font-lock-comment-face)
+    ;;(set-face-attribute start (point) :background "grey")
+  )
   (tumblesocks-view-insert-html-fragment answer))
 
 (defun tumblesocks-view-insert-link ()
