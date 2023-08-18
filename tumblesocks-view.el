@@ -340,7 +340,7 @@ better suited to inserting each post."
        (t (tumblesocks-view-insert-i-have-no-clue-what-this-is)))
       ;; Tags
       (when tags
-        (insert (mapconcat 'identity (mapcar (lambda (tag) (format "#%s" tag)) tags) ", ")))
+        (insert (mapconcat 'identity (mapcar (lambda (tag) (format "#%s" tag)) tags) " ")))
       (insert "\n")
       (insert "\n")
       ;; Record this post data so we know how to read it next
@@ -352,7 +352,7 @@ better suited to inserting each post."
   "Draw the header for the current post, optionally being verbose."
   (let (begin end_bname)
     (setq begin (point))
-    (insert blog_name ":")
+    (insert blog_name)
     (setq end_bname (point))
     (put-text-property begin end_bname 'face (list '(:weight bold) 'highlight))
     ;; Title
