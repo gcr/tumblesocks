@@ -46,6 +46,7 @@ This causes Tumblesocks to ignore the setting of
     (define-key tumblesocks-view-mode-map "r" 'tumblesocks-view-reblog-post-at-point)
     (define-key tumblesocks-view-mode-map (kbd "RET") 'tumblesocks-view-post-at-point)
     (define-key tumblesocks-view-mode-map (kbd "SPC") 'forward-page)
+    (define-key tumblesocks-view-mode-map "a" 'tumblesocks-view-notifications)
     (define-key tumblesocks-view-mode-map "b" 'tumblesocks-view-blog)
     (define-key tumblesocks-view-mode-map "d" 'tumblesocks-view-delete-post-at-point)
     (define-key tumblesocks-view-mode-map "e" 'tumblesocks-view-edit-post-at-point)
@@ -106,8 +107,11 @@ This causes Tumblesocks to ignore the setting of
   "Open the post under point in a new buffer, showing notes, etc"
   (interactive)
   (when (get-text-property (point) 'tumblesocks-post-data)
-    (tumblesocks-view-post
-     (plist-get (get-text-property (point) 'tumblesocks-post-data) :id))))
+    (let ((id (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                         :id))
+          (tumblesocks-blog (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                                       :blog_name)))
+      (tumblesocks-view-post id))))
 
 (defun tumblesocks-view-post-url-at-point ()
   "Open the post under point in your browser"
@@ -154,37 +158,41 @@ This causes Tumblesocks to ignore the setting of
       (tumblesocks-view-refresh)
       (goto-char pos))))
 
-(defun tumblesocks-view-edit-post-at-point ()
+(defun tumblesocks-view-post-at-point ()
+  "Open the post under point in a new buffer, showing notes, etc"
   (interactive)
-  (when (yes-or-no-p "Really try to edit this post? ")
-    (tumblesocks-compose-edit-post
-     (format "%d"
-             (plist-get (get-text-property (point) 'tumblesocks-post-data) :id)))
-    '(lambda ()
-       (let ((pos (point)))
-         (tumblesocks-view-refresh)
-         (goto-char pos)))))
+  (when (get-text-property (point) 'tumblesocks-post-data)
+    (let ((id (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                         :id))
+          (tumblesocks-blog (plist-get (get-text-property (point) 'tumblesocks-post-data)
+                                       :blog_name)))
+      (tumblesocks-view-post id))))
 
 (defun tumblesocks-view-reblog-post-at-point ()
   "Reblog the post at point, if there is one."
   (interactive)
-  (when (get-text-property (point) 'tumblesocks-post-data)
+  (let* ((data (get-text-property (point) 'tumblesocks-post-data))
+	 (from-blog (plist-get data :channel-name))
+	 (post_id (format "%d" (plist-get data :id)))
+	 (reblog_key (plist-get data :reblog_key)))
+  (when data
     ;; Get the reblog key.
-    (let* ((post_id
-            (format "%d"
-                    (plist-get
-                     (get-text-property (point) 'tumblesocks-post-data) :id)))
-           ;; we need to do another API fetch because
-           ;; tumblesocks-post-data doesn't have reblog keys, by design
-           (blog (tumblesocks-api-blog-posts
-                  nil post_id nil "1" nil "true" nil "html"))
-           (post (car (plist-get blog :posts)))
-           (reblog_key (plist-get post :reblog_key)))
+    ;; (let* ((tumblesocks-blog from-blog)
+    ;;        ;; we need to do another API fetch because
+    ;;        ;; tumblesocks-post-data doesn't have reblog keys, by design
+    ;;        (blog (tumblesocks-api-blog-posts
+    ;;               nil post_id nil "1" nil "true" nil "html"))
+    ;;        (post (car (plist-get blog :posts))))
+    ;;   (setq reblog_key (plist-get post :reblog_key)))
+
       (tumblesocks-api-reblog-post
        post_id reblog_key
        (read-string "(Optional) comments to add: "))
       (message "Reblogged.")
-      (tumblesocks-view-refresh))))
+      (let ((pos (point)))
+        (tumblesocks-view-refresh)
+        (goto-char pos))
+      )))
 
 
 
@@ -319,6 +327,8 @@ better suited to inserting each post."
                ;; For answer posts:
                asking_name asking_url question answer)
     (let ((begin-post-area (point)))
+      (insert (make-string fill-column ?\u2500))
+      (insert "\n")
       (tumblesocks-view-insert-header verbose-header)
       (cond
        ((string= type "text") (tumblesocks-view-insert-text))
@@ -330,6 +340,9 @@ better suited to inserting each post."
        ((string= type "photo") (tumblesocks-view-insert-photo))
        ((string= type "chat") (tumblesocks-view-insert-chat))
        (t (tumblesocks-view-insert-i-have-no-clue-what-this-is)))
+      ;; Tags
+      (when tags
+        (insert (mapconcat 'identity (mapcar (lambda (tag) (format "#%s" tag)) tags) " ")))
       (insert "\n")
       ;; Record this post data so we know how to read it next
       (put-text-property begin-post-area (point)
@@ -340,14 +353,15 @@ better suited to inserting each post."
   "Draw the header for the current post, optionally being verbose."
   (let (begin end_bname)
     (setq begin (point))
-    (insert blog_name ":")
+    (insert blog_name)
     (setq end_bname (point))
+    (put-text-property begin end_bname 'face (list '(:weight bold) 'highlight))
     ;; Title
     (insert " ")
     (cond
      (title (tumblesocks-view-insert-html-fragment title t))
      (caption (tumblesocks-view-insert-html-fragment caption t))
-     (question (tumblesocks-view-insert-html-fragment question t))
+     ;;(question (tumblesocks-view-insert-html-fragment question t))
      (t (insert " ")))
     ;; Notes
     (when (and note_count (> note_count 0))
@@ -363,14 +377,7 @@ better suited to inserting each post."
        "\nPermalink: ")
       (tumblesocks-view-insert-parsed-html-fragment
        `(a ((href . ,post_url)) ,post_url) t)
-      (insert "\n"))
-    (put-text-property begin end_bname 'face
-                       (list '(:inverse-video t)
-                             '(:weight bold)
-                             font-lock-keyword-face))
-    (put-text-property end_bname (point) 'face
-                       (list '(:weight bold)
-                             'highlight))))
+      (insert "\n"))))
 
 (defun tumblesocks-view-insert-text ()
   (tumblesocks-view-insert-html-fragment body)
@@ -411,11 +418,13 @@ better suited to inserting each post."
   (insert "\n"))
 
 (defun tumblesocks-view-insert-answer ()
-  (insert asking_name " asks: \n  ")
+  (insert asking_name " asks:")
   (let ((start (point))
-        (shr-indentation 4))
+        (shr-indentation 32))
     (tumblesocks-view-insert-html-fragment question t)
-    (put-text-property start (point) 'face font-lock-comment-face))
+    ;;(put-text-property start (point) 'face font-lock-comment-face)
+    ;;(set-face-attribute start (point) :background "grey")
+  )
   (tumblesocks-view-insert-html-fragment answer))
 
 (defun tumblesocks-view-insert-link ()
@@ -585,6 +594,33 @@ You can browse around, edit, and delete posts from here.
            (bold-that))
          (insert "\n")
          (comment-that))))))
+
+(defun tumblesocks-view-notifications ()
+  "View all notfications, newest on top"
+  ;; TODO paging!
+  (interactive)
+  (tumblesocks-api-blog-notifications)
+  (tumblesocks-view-prepare-buffer "notifications")
+  (let ((begin (point)))
+    (insert "Notifications")
+    (center-line)
+    (insert "\n\n")
+    (put-text-property begin (point) 'face font-lock-comment-face))
+  (dolist (notification (plist-get (tumblesocks-api-blog-notifications) :notifications))
+    (insert (make-string fill-column ?\u2500))
+    (insert "\n")
+    ;;(insert (format "%s\n" notification))
+    (insert (format "%s - " (format-time-string "%D %R" (plist-get notification :timestamp))))
+    (insert (format "%s - " (plist-get notification :type)))
+    (insert (format "%s - " (plist-get notification :from_tumblelog_name)))
+    (when (string= (plist-get notification :type) "reply")
+      (insert (format "%s - " (plist-get notification :reply_text))))
+    (tumblesocks-view-insert-parsed-html-fragment
+     `(img ((src . ,(plist-get notification :media_url)))) t)
+    (insert (format "\n%s\n" (plist-get notification :target_post_summary))))
+  (tumblesocks-view-finishrender)
+  (setq tumblesocks-view-refresh-action
+        `(lambda () (tumblesocks-view-notifications)))) ; <-- CLOSURE HACK :p
 
 (defun tumblesocks-view-like-post-at-point (like-p)
   "Like the post underneath point. With prefix arg (C-u), unlike it."
