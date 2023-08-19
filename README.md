@@ -2,23 +2,28 @@
 tumblesocks - un-break it fork
 ==============================
 
-`tumblesocks.el` old, crazy, messy, awesome, abandoned, and broken, and it depends on `emacs-oauth`, which is much the same. each file has about 70 `flycheck` errors in it. but it also fucking rocks.
+`tumblesocks.el` old, crazy, messy, awesome, abandoned, and broken, and it depends on `emacs-oauth`,
+which is much the same. each file has about 70 `flycheck` errors in it.  But it also fucking rocks.
 
-so this repo adds patches that people have shared online for un-breaking `tumblesocks.el`.
+So this repo adds patches that people have shared online for un-breaking `tumblesocks.el`.
 
-a patched version of ye olde `emacs-oauth` is also needed. it's here: https://codeberg.org/martianh/emacs-oauth.
+A patched version of ye olde `emacs-oauth` is also needed.  It's here: https://codeberg.org/martianh/emacs-oauth.
 
-i haven't actually tried this out yet, i have just patched changes from my `init.el` to these two repos. if you try these out, i'd recommend you remove all trace of any other versions.
+If you try these out, I'd recommend you remove all trace of any other versions.
 
-further patches welcome.
+Further patches are most welcome.
 
-original readme
+
+
+Modified README
 ===============
 
 `tumblesocks-mode` - Tumblr Support for Emacs
 =============================================
 <!-- ![http://i.imgur.com/WW6Qo.png](http://i.imgur.com/WW6Qo.png) -->
-![http://i.imgur.com/9wroS.png](http://i.imgur.com/9wroS.png)
+This is how tumblesocks looks now:
+
+![https://i.ibb.co/9WYG2mB/xwd.jpg](https://i.ibb.co/9WYG2mB/xwd.jpg)
 
 Tumblesocks is an Emacs tumblr client. With it, you can write posts,
 check your dashboard, and view blogs and notes.
@@ -50,6 +55,9 @@ Managing your posts:
 * **c: Compose new post**. Once you are finished writing your post, use `C-c C-c` to **submit** it. Markdown syntax is supported.
 * **d: Delete** the post under the cursor. (This only works if you made that post.)
 * **e: Edit** the post under the cursor. (This only works if you made that post.)
+
+View activity
+* **a: Notifications** shows you your Notifications (likes, reblogs, milestones, replies.)  `tumblesocks-view-notifications` works as well.
 
 Installing
 ----------
