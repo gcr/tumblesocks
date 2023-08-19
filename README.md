@@ -2,22 +2,27 @@
 tumblesocks - un-break it fork
 ==============================
 
-`tumblesocks.el` old, crazy, messy, awesome, abandoned, and broken, and it depends on `emacs-oauth`, which is much the same. each file has about 70 `flycheck` errors in it. but it also fucking rocks.
+`tumblesocks.el` old, crazy, messy, awesome, abandoned, and broken, and it depends on `emacs-oauth`,
+which is much the same. each file has about 70 `flycheck` errors in it.  But it also fucking rocks.
 
-so this repo adds patches that people have shared online for un-breaking `tumblesocks.el`.
+So this repo adds patches that people have shared online for un-breaking `tumblesocks.el`.
 
-a patched version of ye olde `emacs-oauth` is also needed. it's here: https://codeberg.org/martianh/emacs-oauth.
+A patched version of ye olde `emacs-oauth` is also needed.  It's here: https://codeberg.org/martianh/emacs-oauth.
 
-i haven't actually tried this out yet, i have just patched changes from my `init.el` to these two repos. if you try these out, i'd recommend you remove all trace of any other versions.
+If you try these out, I'd recommend you remove all trace of any other versions.
 
-further patches welcome.
+Further patches are most welcome.
 
-original readme
+
+
+Modified README
 ===============
 
 `tumblesocks-mode` - Tumblr Support for Emacs
 =============================================
 <!-- ![http://i.imgur.com/WW6Qo.png](http://i.imgur.com/WW6Qo.png) -->
+This is how tumblesocks looks now:
+
 ![http://i.imgur.com/9wroS.png](http://i.imgur.com/9wroS.png)
 
 Tumblesocks is an Emacs tumblr client. With it, you can write posts,
