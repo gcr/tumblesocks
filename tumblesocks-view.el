@@ -1,5 +1,8 @@
 ;; tumblesocks-view.el -- Provide an interface to view tumblr blog posts.
 
+;; Copyright 2012 gcr
+;; Copyright 2023 gargle
+
 (eval-when-compile
   (require 'easymenu))
 

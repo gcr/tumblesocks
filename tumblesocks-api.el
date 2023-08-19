@@ -1,5 +1,6 @@
 ;; tumblesocks-api.el -- functions for talking with tumblr
 ;; Copyright (C) 2012 gcr
+;; Copyright (C) 2023 gargle
 
 (require 'oauth)
 (require 'json)
