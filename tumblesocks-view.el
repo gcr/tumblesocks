@@ -610,7 +610,7 @@ You can browse around, edit, and delete posts from here.
     (insert (make-string fill-column ?\u2500))
     (insert "\n")
     ;;(insert (format "%s\n" notification))
-    (insert (format "%s - " (format-time-string "%D %r" (plist-get notification :timestamp))))
+    (insert (format "%s - " (format-time-string "%D %R" (plist-get notification :timestamp))))
     (insert (format "%s - " (plist-get notification :type)))
     (insert (format "%s - " (plist-get notification :from_tumblelog_name)))
     (when (string= (plist-get notification :type) "reply")
