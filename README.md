@@ -56,6 +56,9 @@ Managing your posts:
 * **d: Delete** the post under the cursor. (This only works if you made that post.)
 * **e: Edit** the post under the cursor. (This only works if you made that post.)
 
+View activity
+* **a: Notifications** shows you your Notifications (likes, reblogs, milestones, replies.)  `tumblesocks-view-notifications` works as well.
+
 Installing
 ----------
 
