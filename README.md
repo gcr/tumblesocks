@@ -23,7 +23,7 @@ Modified README
 <!-- ![http://i.imgur.com/WW6Qo.png](http://i.imgur.com/WW6Qo.png) -->
 This is how tumblesocks looks now:
 
-![http://i.imgur.com/9wroS.png](http://i.imgur.com/9wroS.png)
+![https://i.ibb.co/9WYG2mB/xwd.jpg](https://i.ibb.co/9WYG2mB/xwd.jpg)
 
 Tumblesocks is an Emacs tumblr client. With it, you can write posts,
 check your dashboard, and view blogs and notes.
