@@ -363,7 +363,7 @@ better suited to inserting each post."
     (insert " ")
     (cond
      (title (tumblesocks-view-insert-html-fragment title t))
-     (caption (tumblesocks-view-insert-html-fragment caption t))
+     ;;(caption (tumblesocks-view-insert-html-fragment caption t))
      ;;(question (tumblesocks-view-insert-html-fragment question t))
      (t (insert " ")))
     ;; Notes
@@ -613,7 +613,7 @@ You can browse around, edit, and delete posts from here.
     (insert (make-string fill-column ?\u2500))
     (insert "\n")
     ;;(insert (format "%s\n" notification))
-    (insert (format "%s - " (format-time-string "%D %R" (plist-get notification :timestamp))))
+    (insert (format "%s - " (format-time-string "%x %X" (plist-get notification :timestamp))))
     (insert (format "%s - " (plist-get notification :type)))
     (insert (format "%s - " (plist-get notification :from_tumblelog_name)))
     (when (string= (plist-get notification :type) "reply")
