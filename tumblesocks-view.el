@@ -363,7 +363,7 @@ better suited to inserting each post."
     (insert " ")
     (cond
      (title (tumblesocks-view-insert-html-fragment title t))
-     (caption (tumblesocks-view-insert-html-fragment caption t))
+     ;;(caption (tumblesocks-view-insert-html-fragment caption t))
      ;;(question (tumblesocks-view-insert-html-fragment question t))
      (t (insert " ")))
     ;; Notes
