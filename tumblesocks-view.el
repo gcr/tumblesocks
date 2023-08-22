@@ -358,15 +358,13 @@ better suited to inserting each post."
     (setq begin (point))
     (insert blog_name)
     ;; Title
-    (insert " ")
     (cond
-     (title (tumblesocks-view-insert-html-fragment title))
-     ;;(caption (tumblesocks-view-insert-html-fragment caption t))
-     ;;(question (tumblesocks-view-insert-html-fragment question t))
-     (t (insert " ")))
+     (title (if (not (string= title ""))
+                (insert " : " title))))
     (setq end_bname (point))
     (put-text-property begin end_bname 'face (list '(:weight bold) 'highlight))
     ;; Date
+    (insert "\n")
     (insert (format-time-string "%c" (date-to-time date)))
     (insert " ")
     ;; Notes
