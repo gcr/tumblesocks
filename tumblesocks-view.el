@@ -665,7 +665,7 @@ You can browse around, edit, and delete posts from here.
   (tumblesocks-view-prepare-buffer
    (concat "Tag search: " tag))
   (tumblesocks-view-render-blogdata
-   (tumblesocks-api-tagged tag nil nil "html")
+   (tumblesocks-api-tagged tag nil nil "raw")
    0) ; don't allow them to browse next (this isn't possible in general anyways)
   (tumblesocks-view-finishrender)
   (setq tumblesocks-view-refresh-action
