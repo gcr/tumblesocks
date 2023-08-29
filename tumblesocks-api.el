@@ -66,10 +66,10 @@ call `tumblesocks-api-reauthenticate' after this."
           (if (string-match "\\([^:]*\\):\\(.*\\)"
                             (buffer-substring (point-min) (point-max)))
               (setq tumblesocks-token
-                    (make-oauth-access-token
+                    (oauth-access-token--create
                      :consumer-key tumblesocks-consumer-key
                      :consumer-secret tumblesocks-secret-key
-                     :auth-t (make-oauth-t
+                     :auth-t (oauth-t--create
                               :token (match-string 1 str)
                               :token-secret (match-string 2 str))))))
         (kill-this-buffer)))
