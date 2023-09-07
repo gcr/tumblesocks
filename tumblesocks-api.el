@@ -137,7 +137,7 @@ error if the error code is not in the 200 category."
                           tumblesocks-token
                           (concat url "?api_key=" tumblesocks-consumer-key
                                   (mapconcat
-                                   '(lambda (x)
+                                   #'(lambda (x)
                                       (concat "&" (url-hexify-string (format "%s" (car x)))
                                               "=" (url-hexify-string (format "%s" (cdr x)))))
                                    (tumblesocks-plist-to-alist params) "")))
@@ -152,7 +152,7 @@ error if the error code is not in the 200 category."
   (with-current-buffer (url-retrieve-synchronously
                         (concat url "?api_key=" tumblesocks-consumer-key
                                 (mapconcat
-                                 '(lambda (x)
+                                 #'(lambda (x)
                                     (concat "&" (url-hexify-string (format "%s" (car x)))
                                             "=" (url-hexify-string (format "%s" (cdr x)))))
                                  (tumblesocks-plist-to-alist params) "")))
@@ -169,7 +169,7 @@ error if the error code is not in the 200 category."
     (with-current-buffer
         (oauth-post-url
          tumblesocks-token url
-         (mapcar '(lambda (x)
+         (mapcar #'(lambda (x)
                     (cons (format "%s" (car x))
                           (format "%s" (cdr x))))
                  (tumblesocks-plist-to-alist params)))

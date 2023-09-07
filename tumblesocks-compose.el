@@ -8,7 +8,7 @@
 ;; Tumblr compose mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar tumblesocks-compose-finish-action
-  '(lambda () (call-interactively 'tumblesocks-text-post-from-buffer))
+  #'(lambda () (call-interactively 'tumblesocks-text-post-from-buffer))
   "The action to run when finishing posting")
 (defvar tumblesocks-compose-continuation nil
   "Optional action to run when finishing editing or posting.
@@ -38,7 +38,7 @@ tumblesocks-view uses this to refresh buffers, for example.")
   "Major mode for composing a new Tumblr post."
   (make-local-variable 'tumblesocks-compose-finish-action)
   (setq tumblesocks-compose-finish-action
-          '(lambda () (call-interactively 'tumblesocks-text-post-from-buffer)))
+          #'(lambda () (call-interactively 'tumblesocks-text-post-from-buffer)))
   (make-local-variable 'tumblesocks-compose-editing-args)
   (make-local-variable 'tumblesocks-compose-editing-id)
   (make-local-variable 'tumblesocks-compose-continuation))

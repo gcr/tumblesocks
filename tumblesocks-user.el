@@ -42,7 +42,7 @@ the user what to do for each post."
                       "Blog URL to unfollow (TAB to complete): "
                       (let ((bloglist (plist-get (tumblesocks-api-user-following)
                                                  :blogs)))
-                        (mapcar '(lambda (blog)
+                        (mapcar #'(lambdao (blog)
                                    (plist-get blog :url))
                                 bloglist))
                       nil t)))

@@ -330,7 +330,7 @@ better suited to inserting each post."
                ;; For answer posts:
                asking_name asking_url question answer)
     (let ((begin-post-area (point)))
-      (insert (make-string fill-column ?\u2500))
+      (insert (make-string (frame-width) ?\u2500))
       (insert "\n")
       (tumblesocks-view-insert-header verbose-header)
       (cond
@@ -377,7 +377,7 @@ better suited to inserting each post."
     (when verbose
       (insert
        "Date: " date
-       "\nTags: " (mapconcat '(lambda (x) (concat "#" x)) tags ", ")
+       "\nTags: " (mapconcat #'(lambda (x) (concat "#" x)) tags ", ")
        "\nPermalink: ")
       (tumblesocks-view-insert-parsed-html-fragment
        `(a ((href . ,post_url)) ,post_url) t)
@@ -392,7 +392,7 @@ better suited to inserting each post."
          `(p () .
              ,(apply 'append
                      (mapcar
-                      '(lambda (photodata)
+                      #'(lambda (photodata)
                          ;; There could be several photos here, and
                          ;; each photo has several alternative sizes.
                          ;; The first is usually the biggest, the
@@ -400,7 +400,7 @@ better suited to inserting each post."
                          (let* ((alts (plist-get photodata :alt_sizes))
                                 (desired-size-alts
                                  (delq nil
-                                  (mapcar '(lambda(alt)
+                                  (mapcar #'(lambda(alt)
                                              (and (= (plist-get alt :width)
                                                      tumblesocks-desired-image-size)
                                                   alt))
@@ -533,7 +533,7 @@ You can browse around, edit, and delete posts from here.
      99999) ; allow them to browse practically infinite posts
     (tumblesocks-view-finishrender)
     (setq tumblesocks-view-refresh-action
-          '(lambda () (tumblesocks-view-dashboard t)))))
+          #'(lambda () (tumblesocks-view-dashboard t)))))
 
 (defun tumblesocks-view-post (post_id)
   "View a post in its own dedicated buffer, with notes"
