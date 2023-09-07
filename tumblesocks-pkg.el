@@ -1,4 +1,4 @@
-(define-package "tumblesocks" "0.0.6"
+(define-package "tumblesocks" "1.1.8"
   "An Emacs tumblr client."
   '((htmlize "20210825.2150")
     (oauth "20230706.2026")
