@@ -1,5 +1,5 @@
-(define-package "tumblesocks" "0.0.6"
+(define-package "tumblesocks" "1.1.8"
   "An Emacs tumblr client."
-  '((htmlize "1.39")
-    (oauth "1.0.3")
-    (markdown-mode "1.8.1")))
+  '((htmlize "20210825.2150")
+    (oauth "20230706.2026")
+    (markdown-mode "20230830.1338")))

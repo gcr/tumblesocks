@@ -1,5 +1,6 @@
 ;; tumblesocks-api.el -- functions for talking with tumblr
 ;; Copyright (C) 2012 gcr
+;; Copyright (C) 2023 gargle
 
 (require 'oauth)
 (require 'json)
@@ -65,10 +66,10 @@ call `tumblesocks-api-reauthenticate' after this."
           (if (string-match "\\([^:]*\\):\\(.*\\)"
                             (buffer-substring (point-min) (point-max)))
               (setq tumblesocks-token
-                    (make-oauth-access-token
+                    (oauth-access-token--create
                      :consumer-key tumblesocks-consumer-key
                      :consumer-secret tumblesocks-secret-key
-                     :auth-t (make-oauth-t
+                     :auth-t (oauth-t--create
                               :token (match-string 1 str)
                               :token-secret (match-string 2 str))))))
         (kill-this-buffer)))
@@ -136,7 +137,7 @@ error if the error code is not in the 200 category."
                           tumblesocks-token
                           (concat url "?api_key=" tumblesocks-consumer-key
                                   (mapconcat
-                                   '(lambda (x)
+                                   #'(lambda (x)
                                       (concat "&" (url-hexify-string (format "%s" (car x)))
                                               "=" (url-hexify-string (format "%s" (cdr x)))))
                                    (tumblesocks-plist-to-alist params) "")))
@@ -151,7 +152,7 @@ error if the error code is not in the 200 category."
   (with-current-buffer (url-retrieve-synchronously
                         (concat url "?api_key=" tumblesocks-consumer-key
                                 (mapconcat
-                                 '(lambda (x)
+                                 #'(lambda (x)
                                     (concat "&" (url-hexify-string (format "%s" (car x)))
                                             "=" (url-hexify-string (format "%s" (cdr x)))))
                                  (tumblesocks-plist-to-alist params) "")))
@@ -168,7 +169,7 @@ error if the error code is not in the 200 category."
     (with-current-buffer
         (oauth-post-url
          tumblesocks-token url
-         (mapcar '(lambda (x)
+         (mapcar #'(lambda (x)
                     (cons (format "%s" (car x))
                           (format "%s" (cdr x))))
                  (tumblesocks-plist-to-alist params)))
@@ -180,8 +181,8 @@ returning JSON or signaling an error for other requests."
   (decode-coding-region (point-min) (point-max) 'utf-8-dos)
   ;; the following copied from url.el
   (goto-char (point-min))
-  (skip-chars-forward " \t\n")		; Skip any blank crap
-  (skip-chars-forward "HTTP/")		; Skip HTTP Version
+  (skip-chars-forward " \t\n")         ; Skip any blank crap
+  (skip-chars-forward "HTTP/")         ; Skip HTTP Version
   (skip-chars-forward "[0-9].")
   (let ((pointpos (point))
         (code (read (current-buffer))))
@@ -194,7 +195,9 @@ returning JSON or signaling an error for other requests."
       (error (buffer-substring pointpos
                                (line-end-position))))
      (t
-      (search-forward-regexp "^$" nil t)
+      ;; brute force and ignorance
+      (search-forward-regexp "^{" nil t)
+      (previous-line)
       ;; body
       (let* ((json-response (buffer-substring (1+ (point)) (point-max)))
              (json-object-type 'plist)
@@ -257,6 +260,17 @@ returning JSON or signaling an error for other requests."
   "Unlike a given post"
   (tumblesocks-api-http-oauth-post (tumblesocks-api-url "/user/unlike")
                                    `(:id ,id :reblog_key ,reblog_key)))
+
+(defun tumblesocks-api-blog-notifications (&optional limit offset)
+  "Retrieve the activity items for a specific blog, in reverse chronological order, newest first"
+  (unless tumblesocks-blog (error "Which blog? Please set `tumblesocks-blog'"))
+  (let ((args (append
+               (and limit `(:limit ,limit))
+               (and offset `(:offset ,offset)))))
+    (tumblesocks-api-http-oauth-get
+     (tumblesocks-api-url "/blog/"
+                          tumblesocks-blog
+                          "/notifications") args)))
 
 (defun tumblesocks-api-blog-info ()
   "Gather information about the blog listed in
